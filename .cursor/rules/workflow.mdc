@@ -1,0 +1,71 @@
+---
+globs: "**/*"
+description: "해커톤 개발 워크플로우 및 에이전트 활용 규칙"
+alwaysApply: true
+---
+
+# Hackathon Development Workflow
+
+## 에이전트 작업 원칙
+1. **Plan First**: 어떤 작업이든 Plan Mode로 먼저 계획 수립
+2. **작은 단위로 커밋**: 기능 하나 완성될 때마다 커밋
+3. **병렬 가능한 작업은 분리**: 서로 의존성 없는 작업은 별도 에이전트로 실행
+4. **기존 패턴 따르기**: 새 파일 생성 시 기존 코드의 패턴과 구조를 따름
+
+## 코드 생성 시 체크리스트
+- [ ] TypeScript strict mode 통과 여부
+- [ ] import 경로에 `@/` alias 사용 여부
+- [ ] Server/Client Component 구분이 올바른지
+- [ ] 에러 핸들링 포함 여부
+- [ ] 한국어 주석 포함 (복잡한 로직)
+- [ ] TailwindCSS 클래스만 사용 (inline style 금지)
+
+## Git 브랜치 전략
+```
+main                  ← 배포 브랜치 (Vercel 자동 배포)
+├── feat/landing      ← FE-1: 랜딩 페이지
+├── feat/dashboard    ← FE-1: 대시보드
+├── feat/api-crud     ← FE-2: API 라우트
+├── feat/auth         ← FE-2: 인증
+├── feat/ai-pipeline  ← AI-1: AI 파이프라인
+└── feat/prompts      ← AI-2: 프롬프트 최적화
+```
+
+## Parallel Agents 활용 가이드
+
+### 병렬로 돌리기 좋은 작업
+- 서로 다른 페이지 UI 동시 생성
+- 독립된 API 엔드포인트 동시 구현
+- 여러 AI 프롬프트 변형 동시 테스트
+- UI 컴포넌트 (Button, Card, Modal 등) 동시 생성
+
+### 순차로 해야 하는 작업
+- DB 스키마 → API 라우트 → UI 연동 (의존성 체인)
+- 인증 설정 → 인증 필요한 API 구현
+- 공통 유틸리티 → 이를 사용하는 컴포넌트
+
+## 파일 생성/수정 시
+- 새 컴포넌트: `src/components/` 아래 적절한 위치에 생성
+- 새 API: `src/app/api/` 아래 RESTful 구조로 생성
+- 새 유틸리티: `src/lib/` 아래 적절한 모듈에 추가
+- 새 훅: `src/hooks/` 아래 `use` 접두사로 생성
+- 새 타입: `src/types/` 아래 관련 파일에 추가
+
+## 커밋 메시지 컨벤션
+```
+feat: 기능 추가
+fix: 버그 수정
+style: UI/스타일 변경
+refactor: 코드 리팩토링
+chore: 설정/의존성 변경
+```
+
+## 디버깅 시
+- Browser MCP로 스크린샷 캡처해서 에이전트에게 전달
+- Ask Mode로 에러 분석 후 Agent Mode로 수정
+- `console.error`에 `[모듈명]` 프리픽스 포함
+
+## 시간 관리 규칙
+- 15:00 이후 새 기능 추가 금지
+- 15:00 이후는 기존 기능 폴리싱 + 데모 최적화만
+- 버그 수정은 데모에 영향주는 것만 (나머지는 무시)

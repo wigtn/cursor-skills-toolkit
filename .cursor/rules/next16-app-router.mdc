@@ -1,0 +1,78 @@
+---
+globs: "src/app/**/*.{ts,tsx}"
+description: "Next.js 16 App Router 패턴 및 규칙"
+---
+
+# Next.js 16 App Router Rules
+
+## Server Components (기본값)
+- 모든 컴포넌트는 기본적으로 Server Component
+- 클라이언트 인터랙션이 필요한 경우에만 `"use client"` 지시어 추가
+- Server Component에서는 async/await로 직접 데이터 패칭
+- Server Component에서 useState, useEffect, onClick 등 사용 불가
+
+## Route 구조
+- `page.tsx`: 라우트의 UI
+- `layout.tsx`: 공유 레이아웃 (중첩 가능)
+- `loading.tsx`: Suspense 기반 로딩 UI
+- `error.tsx`: Error Boundary (`"use client"` 필수)
+- `not-found.tsx`: 404 페이지
+- Route Group `(groupName)/`으로 URL에 영향 없이 라우트 그룹핑
+
+## Data Fetching 패턴
+```typescript
+// Server Component에서 직접 fetch
+export default async function Page() {
+  const data = await getData();
+  return <Component data={data} />;
+}
+
+// 캐싱 전략
+fetch(url, { cache: 'force-cache' })   // 정적 (기본)
+fetch(url, { cache: 'no-store' })      // 동적
+fetch(url, { next: { revalidate: 60 }}) // ISR (60초)
+```
+
+## API Route 패턴
+```typescript
+// src/app/api/[route]/route.ts
+import { NextRequest, NextResponse } from 'next/server';
+
+export async function POST(request: NextRequest) {
+  try {
+    const body = await request.json();
+    // 로직
+    return NextResponse.json({ data: result });
+  } catch (error) {
+    return NextResponse.json(
+      { error: 'Internal Server Error' },
+      { status: 500 }
+    );
+  }
+}
+```
+
+## Metadata
+```typescript
+// Static metadata
+export const metadata: Metadata = {
+  title: '페이지 제목',
+  description: '설명',
+};
+
+// Dynamic metadata
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  return { title: `Dynamic - ${params.id}` };
+}
+```
+
+## Streaming & Suspense
+- 무거운 컴포넌트는 `<Suspense>`로 감싸서 스트리밍
+- `loading.tsx`를 활용해 자동 Suspense boundary 생성
+- 데이터 패칭이 느린 부분은 별도 Server Component로 분리
+
+## 금지 사항
+- `getServerSideProps`, `getStaticProps` 사용 금지 (Pages Router 문법)
+- Server Component에서 브라우저 API (window, document) 접근 금지
+- `"use client"` 남용 금지 — 인터랙티브 부분만 Client Component로 분리
+- `next/router` 사용 금지 → `next/navigation`의 `useRouter`, `usePathname`, `useSearchParams` 사용

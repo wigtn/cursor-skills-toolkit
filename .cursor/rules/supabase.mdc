@@ -1,0 +1,103 @@
+---
+globs: "src/lib/supabase/**/*.ts"
+description: "Supabase 클라이언트 및 DB 연동 규칙"
+---
+
+# Supabase Rules
+
+## 클라이언트 설정
+
+### 브라우저용 (Client Component)
+```typescript
+// src/lib/supabase/client.ts
+import { createBrowserClient } from '@supabase/ssr';
+import type { Database } from '@/types/database';
+
+export function createClient() {
+  return createBrowserClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+}
+```
+
+### 서버용 (Server Component, API Route)
+```typescript
+// src/lib/supabase/server.ts
+import { createServerClient } from '@supabase/ssr';
+import { cookies } from 'next/headers';
+import type { Database } from '@/types/database';
+
+export async function createClient() {
+  const cookieStore = await cookies();
+
+  return createServerClient<Database>(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll() {
+          return cookieStore.getAll();
+        },
+        setAll(cookiesToSet) {
+          try {
+            cookiesToSet.forEach(({ name, value, options }) =>
+              cookieStore.set(name, value, options)
+            );
+          } catch {
+            // Server Component에서는 무시 가능
+          }
+        },
+      },
+    }
+  );
+}
+```
+
+## 쿼리 패턴
+```typescript
+// 조회
+const { data, error } = await supabase
+  .from('analyses')
+  .select('*')
+  .eq('user_id', userId)
+  .order('created_at', { ascending: false })
+  .limit(20);
+
+// 삽입
+const { data, error } = await supabase
+  .from('analyses')
+  .insert({ user_id: userId, input: userInput, status: 'pending' })
+  .select()
+  .single();
+
+// 업데이트
+const { data, error } = await supabase
+  .from('analyses')
+  .update({ status: 'completed', result: resultData })
+  .eq('id', analysisId)
+  .select()
+  .single();
+```
+
+## Realtime 구독
+```typescript
+// Client Component에서 실시간 구독
+useEffect(() => {
+  const channel = supabase
+    .channel('analysis-updates')
+    .on('postgres_changes',
+      { event: 'UPDATE', schema: 'public', table: 'analyses', filter: `id=eq.${id}` },
+      (payload) => setData(payload.new)
+    )
+    .subscribe();
+
+  return () => { supabase.removeChannel(channel); };
+}, [id]);
+```
+
+## 규칙
+- 서버에서는 `@/lib/supabase/server`, 클라이언트에서는 `@/lib/supabase/client`
+- `Database` 타입을 항상 제네릭으로 전달
+- `service_role` 키는 서버 사이드에서만, 관리자 작업에만 사용
+- RLS (Row Level Security) 정책은 Supabase 대시보드에서 관리

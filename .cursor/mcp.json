@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "supabase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@supabase/mcp-server-supabase@latest",
+        "--supabase-url",
+        "YOUR_SUPABASE_URL",
+        "--supabase-service-role-key",
+        "YOUR_SERVICE_ROLE_KEY"
+      ]
+    },
+    "browser": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "@anthropic-ai/browser-mcp@latest"
+      ]
+    },
+    "vercel": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "vercel-mcp@latest"
+      ],
+      "env": {
+        "VERCEL_TOKEN": "YOUR_VERCEL_TOKEN"
+      }
+    }
+  }
+}

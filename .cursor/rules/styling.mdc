@@ -1,0 +1,99 @@
+---
+globs: "src/**/*.{tsx,css}"
+description: "TailwindCSS v4 스타일링 규칙"
+---
+
+# Styling Rules (TailwindCSS v4)
+
+## 기본 원칙
+- TailwindCSS 유틸리티 클래스 사용 (inline style 금지)
+- 조건부 클래스는 `cn()` 유틸리티 사용 (clsx + tailwind-merge)
+- 다크모드: `dark:` prefix 사용
+- 반응형: mobile-first (`sm:`, `md:`, `lg:`, `xl:`)
+
+## cn() 유틸리티
+```typescript
+// src/lib/utils.ts
+import { clsx, type ClassValue } from "clsx";
+import { twMerge } from "tailwind-merge";
+
+export function cn(...inputs: ClassValue[]) {
+  return twMerge(clsx(inputs));
+}
+```
+
+## TailwindCSS v4 설정
+```css
+/* src/styles/globals.css */
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #2563eb;
+  --color-primary-hover: #1d4ed8;
+  --color-secondary: #64748b;
+  --color-accent: #f59e0b;
+  --color-background: #ffffff;
+  --color-foreground: #0f172a;
+  --color-muted: #f1f5f9;
+  --color-border: #e2e8f0;
+
+  --font-sans: "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  --radius-sm: 0.375rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+  --radius-xl: 1rem;
+}
+```
+
+## 컴포넌트 스타일 패턴
+```typescript
+// 조건부 스타일
+<div className={cn(
+  "rounded-lg border p-4",
+  isActive && "border-primary bg-primary/5",
+  isDisabled && "opacity-50 cursor-not-allowed"
+)} />
+
+// 반응형
+<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4" />
+
+// 다크모드
+<div className="bg-white dark:bg-gray-900 text-gray-900 dark:text-gray-100" />
+```
+
+## 레이아웃 패턴
+```typescript
+// 페이지 컨테이너
+<main className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-8">
+
+// 중앙 정렬 카드
+<div className="flex min-h-screen items-center justify-center">
+  <div className="w-full max-w-md space-y-6 rounded-xl border p-8 shadow-sm">
+
+// Sticky 헤더
+<header className="sticky top-0 z-50 border-b bg-white/80 backdrop-blur-sm">
+```
+
+## 애니메이션
+```typescript
+// 기본 트랜지션
+"transition-colors duration-200"
+"transition-all duration-300"
+
+// 호버 효과
+"hover:shadow-md hover:-translate-y-0.5 transition-all"
+
+// 로딩 스켈레톤
+"animate-pulse bg-gray-200 rounded"
+
+// 페이드인
+"animate-in fade-in duration-500"
+```
+
+## 금지 사항
+- inline style 금지 (`style={{ ... }}`)
+- CSS Modules 사용 금지 — TailwindCSS만 사용
+- `!important` 남용 금지
+- 색상 하드코딩 금지 → `@theme` 변수 또는 Tailwind 팔레트 사용

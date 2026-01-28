@@ -1,0 +1,137 @@
+---
+globs: "src/lib/ai/**/*.ts"
+description: "AI API 통합 패턴 (OpenAI, Anthropic)"
+---
+
+# AI Integration Rules
+
+## 클라이언트 설정
+```typescript
+// src/lib/ai/client.ts
+import OpenAI from 'openai';
+import Anthropic from '@anthropic-ai/sdk';
+
+export const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
+});
+
+export const anthropic = new Anthropic({
+  apiKey: process.env.ANTHROPIC_API_KEY,
+});
+```
+
+## 프롬프트 관리
+```typescript
+// src/lib/ai/prompts.ts
+// 프롬프트는 반드시 이 파일에서 중앙 관리
+// 절대 API 라우트 핸들러에 인라인으로 프롬프트 하드코딩 금지
+
+export const SYSTEM_PROMPTS = {
+  analyzer: `You are an expert analyst...`,
+  summarizer: `You are a concise summarizer...`,
+} as const;
+
+export function buildAnalysisPrompt(input: string): string {
+  return `Analyze the following:\n\n${input}\n\nProvide structured output as JSON.`;
+}
+```
+
+## API 호출 패턴
+```typescript
+// OpenAI 호출
+async function callOpenAI(prompt: string) {
+  const response = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [
+      { role: 'system', content: SYSTEM_PROMPTS.analyzer },
+      { role: 'user', content: prompt },
+    ],
+    temperature: 0.7,
+    max_tokens: 2000,
+    response_format: { type: 'json_object' }, // 구조화된 응답 시
+  });
+
+  return response.choices[0].message.content;
+}
+
+// Anthropic 호출
+async function callAnthropic(prompt: string) {
+  const response = await anthropic.messages.create({
+    model: 'claude-sonnet-4-20250514',
+    max_tokens: 2000,
+    system: SYSTEM_PROMPTS.analyzer,
+    messages: [
+      { role: 'user', content: prompt },
+    ],
+  });
+
+  return response.content[0].type === 'text' ? response.content[0].text : '';
+}
+```
+
+## 스트리밍 패턴
+```typescript
+// OpenAI 스트리밍
+export async function streamAnalysis(prompt: string) {
+  const stream = await openai.chat.completions.create({
+    model: 'gpt-4o',
+    messages: [{ role: 'user', content: prompt }],
+    stream: true,
+  });
+
+  return stream;
+}
+```
+
+## 응답 파싱
+```typescript
+// src/lib/ai/parser.ts
+import { z } from 'zod';
+
+const AnalysisResultSchema = z.object({
+  summary: z.string(),
+  score: z.number().min(0).max(100),
+  insights: z.array(z.string()),
+  recommendations: z.array(z.string()),
+});
+
+export type AnalysisResult = z.infer<typeof AnalysisResultSchema>;
+
+export function parseAnalysisResponse(raw: string): AnalysisResult {
+  const parsed = JSON.parse(raw);
+  return AnalysisResultSchema.parse(parsed);
+}
+```
+
+## 에러 핸들링
+```typescript
+// timeout + retry 래퍼
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 2,
+  timeoutMs = 30000
+): Promise<T> {
+  for (let attempt = 0; attempt <= maxRetries; attempt++) {
+    try {
+      const controller = new AbortController();
+      const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+      const result = await fn();
+      clearTimeout(timer);
+      return result;
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+      await new Promise(r => setTimeout(r, 1000 * (attempt + 1)));
+    }
+  }
+  throw new Error('Unreachable');
+}
+```
+
+## 규칙
+- 프롬프트는 반드시 `src/lib/ai/prompts.ts`에서 관리
+- AI 응답은 반드시 Zod로 파싱/검증
+- API 키는 서버 사이드에서만 접근 (`NEXT_PUBLIC_` 접두사 금지)
+- 스트리밍 우선 — UX 체감 속도 향상에 필수
+- 모델 선택: 속도 우선이면 gpt-4o-mini, 품질 우선이면 gpt-4o 또는 claude-sonnet-4
+- timeout 30초, retry 최대 2회
