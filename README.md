@@ -48,14 +48,17 @@ cp .env.example .env
 
 ---
 
-## 팀 역할 및 담당 Command
+## 팀 역할 및 Phase별 Command
 
-| 역할 | 담당자 | Command 파일 | Phase |
-|------|--------|--------------|-------|
-| **3D 리드** | FE-1 | `.cursor/commands/fe1-3d-terrarium.md` | Phase 2 |
-| **상태/로직** | FE-2 | `.cursor/commands/fe2-state-shop.md` | Phase 2, 4 |
-| **AI 리드** | AI-1 | `.cursor/commands/ai1-chatbot.md` | Phase 3 |
-| **콘텐츠/QA** | AI-2 | `.cursor/commands/ai2-content.md` | Phase 3, 5 |
+| Phase | 시간 | 담당자 | Command 파일 |
+|-------|------|--------|--------------|
+| **1** | 11:00-11:20 | 전원 | `phase1-setup.md` |
+| **2** | 11:20-12:40 | FE-1 | `phase2-fe1-3d.md` |
+| **2** | 11:20-12:40 | FE-2 | `phase2-fe2-shop.md` |
+| **3** | 12:40-14:00 | AI-1 | `phase3-ai1-chat.md` |
+| **3** | 12:40-14:00 | AI-2 | `phase3-ai2-content.md` |
+| **4** | 14:00-15:00 | FE-2 | `phase4-routine.md` |
+| **5** | 15:00-15:30 | AI-2/전원 | `phase5-test.md` |
 
 ---
 
@@ -63,17 +66,20 @@ cp .env.example .env
 
 ### Commands (`.cursor/commands/`)
 
-담당자별로 Cursor에 복사-붙여넣기 할 프롬프트:
+Phase별로 순차 실행하는 명령어 파일:
 
 ```
 .cursor/commands/
-├── fe1-3d-terrarium.md   # FE-1: 3D 테라리움 씬 + 아이템
-├── fe2-state-shop.md     # FE-2: Zustand 상태 + 상점 + 일기
-├── ai1-chatbot.md        # AI-1: OpenAI 챗봇 + 스트리밍
-├── ai2-content.md        # AI-2: 프롬프트 + 질문 + 멘트
-├── implement-phase.md    # 범용 Phase 구현 가이드
-└── test-demo.md          # 데모 시나리오 테스트
+├── phase1-setup.md        # Phase 1: 환경 설정 (전원)
+├── phase2-fe1-3d.md       # Phase 2: 3D 테라리움 (FE-1)
+├── phase2-fe2-shop.md     # Phase 2: 상점 + 상태 (FE-2)
+├── phase3-ai1-chat.md     # Phase 3: AI 챗봇 (AI-1)
+├── phase3-ai2-content.md  # Phase 3: 정령 콘텐츠 (AI-2)
+├── phase4-routine.md      # Phase 4: 감정 루틴 (FE-2)
+└── phase5-test.md         # Phase 5: 테스트 (전원)
 ```
+
+**실행 순서**: Phase 1 → Phase 2 (병렬) → Phase 3 (병렬) → Phase 4 → Phase 5
 
 ### Rules (`.cursor/rules/`)
 
@@ -104,10 +110,10 @@ Cursor가 자동으로 적용하는 코딩 규칙:
 | Phase | 시간 | 담당 | 내용 |
 |-------|------|------|------|
 | **1** | 11:00-11:20 | 전원 | 환경 설정, 패키지 설치 |
-| **2** | 11:20-12:40 | FE-1, FE-2 | 3D 테라리움 + 상점 |
-| **3** | 12:40-14:00 | AI-1, AI-2, FE-2 | AI 챗봇 + 정령 시스템 |
+| **2** | 11:20-12:40 | FE-1, FE-2 | 3D 테라리움 + 상점 (병렬) |
+| **3** | 12:40-14:00 | AI-1, AI-2 | AI 챗봇 + 정령 콘텐츠 (병렬) |
 | **4** | 14:00-15:00 | FE-2 | 감정 루틴 (일기, 마무리) |
-| **5** | 15:00-15:30 | 전원 | 테스트 + 버그 수정 |
+| **5** | 15:00-15:30 | AI-2/전원 | 테스트 + 버그 수정 |
 
 ---
 
