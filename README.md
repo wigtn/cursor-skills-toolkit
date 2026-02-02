@@ -48,17 +48,17 @@ cp .env.example .env
 
 ---
 
-## 팀 역할 및 Phase별 Command
+## 팀 역할 및 Command
 
-| Phase | 시간 | 담당자 | Command 파일 |
-|-------|------|--------|--------------|
-| **1** | 11:00-11:20 | 전원 | `phase1-setup.md` |
-| **2** | 11:20-12:40 | FE-1 | `phase2-fe1-3d.md` |
-| **2** | 11:20-12:40 | FE-2 | `phase2-fe2-shop.md` |
-| **3** | 12:40-14:00 | AI-1 | `phase3-ai1-chat.md` |
-| **3** | 12:40-14:00 | AI-2 | `phase3-ai2-content.md` |
-| **4** | 14:00-15:00 | FE-2 | `phase4-routine.md` |
-| **5** | 15:00-15:30 | AI-2/전원 | `phase5-test.md` |
+| 담당자 | Command 파일 | 핵심 역할 |
+|--------|--------------|----------|
+| **전원** | `phase1-setup.md` | Phase 1 환경 설정 |
+| **FE-1** | `fe1-all-tasks.md` | 3D 씬, 아이템, 애니메이션 |
+| **FE-2** | `fe2-all-tasks.md` | 타입, 상태, 상점, 정령 UI, 일기 |
+| **AI-1** | `ai1-all-tasks.md` | OpenAI 연동, 챗봇, 스트리밍 |
+| **AI-2** | `ai2-all-tasks.md` | 프롬프트, 질문, 멘트, QA |
+
+**각 담당자는 본인 파일 하나만 Cursor에 붙여넣기하면 됨!**
 
 ---
 
@@ -66,20 +66,18 @@ cp .env.example .env
 
 ### Commands (`.cursor/commands/`)
 
-Phase별로 순차 실행하는 명령어 파일:
+담당자별 전체 작업이 담긴 명령어 파일:
 
 ```
 .cursor/commands/
-├── phase1-setup.md        # Phase 1: 환경 설정 (전원)
-├── phase2-fe1-3d.md       # Phase 2: 3D 테라리움 (FE-1)
-├── phase2-fe2-shop.md     # Phase 2: 상점 + 상태 (FE-2)
-├── phase3-ai1-chat.md     # Phase 3: AI 챗봇 (AI-1)
-├── phase3-ai2-content.md  # Phase 3: 정령 콘텐츠 (AI-2)
-├── phase4-routine.md      # Phase 4: 감정 루틴 (FE-2)
-└── phase5-test.md         # Phase 5: 테스트 (전원)
+├── phase1-setup.md     # Phase 1: 환경 설정 (전원 함께)
+├── fe1-all-tasks.md    # FE-1: 3D + 애니메이션 (전 Phase)
+├── fe2-all-tasks.md    # FE-2: 상태 + 상점 + 일기 (전 Phase)
+├── ai1-all-tasks.md    # AI-1: OpenAI + 챗봇 (전 Phase)
+└── ai2-all-tasks.md    # AI-2: 콘텐츠 + QA (전 Phase)
 ```
 
-**실행 순서**: Phase 1 → Phase 2 (병렬) → Phase 3 (병렬) → Phase 4 → Phase 5
+**한 파일 = 한 사람의 모든 작업 (Phase 1~5)**
 
 ### Rules (`.cursor/rules/`)
 

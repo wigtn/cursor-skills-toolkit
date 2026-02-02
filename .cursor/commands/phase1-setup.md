@@ -1,88 +1,99 @@
-# Phase 1: 환경 설정
+# Phase 1: 환경 설정 (전원)
 
 **담당**: 전원 (FE-1 리드)
 **시간**: 11:00 ~ 11:20 (20분)
-**선행 조건**: 없음
 
-## 컨텍스트 파일
-@docs/prd/PRD_stone-garden.md
-@docs/todo_plan/PLAN_stone-garden.md
+## 1. 프로젝트 생성 (FE-1)
 
-## 구현 요청
-
-Expo 프로젝트를 생성하고 필요한 패키지를 설치해줘.
-
-### 1. Expo 프로젝트 생성
 ```bash
 npx create-expo-app@latest healing-terrarium --template blank-typescript
 cd healing-terrarium
 ```
 
-### 2. 패키지 설치
-```bash
-# 3D
-npx expo install expo-gl expo-three three
+## 2. 패키지 설치 (병렬 실행)
 
-# 상태 관리
+### FE-1: 3D 패키지
+```bash
+npx expo install expo-gl expo-three three
+```
+
+### FE-2: 상태 관리 + UI
+```bash
 npm install zustand
 npx expo install @react-native-async-storage/async-storage
-
-# AI
-npm install openai
-
-# UI
-npm install nativewind tailwindcss
-npx expo install react-native-reanimated react-native-gesture-handler
 npm install @gorhom/bottom-sheet
-
-# Navigation
-npx expo install expo-router expo-linking expo-constants
+npx expo install react-native-reanimated react-native-gesture-handler
 ```
 
-### 3. NativeWind 설정
-- `tailwind.config.js` 생성
-- `babel.config.js` 수정
-- `global.css` 생성
-
-### 4. 폴더 구조 생성
-```
-app/
-├── (tabs)/
-│   ├── _layout.tsx
-│   └── index.tsx
-├── _layout.tsx
-components/
-├── Terrarium/
-│   └── items/
-├── Chat/
-├── Spirit/
-├── Shop/
-├── Diary/
-└── UI/
-stores/
-hooks/
-lib/
-types/
+### AI-1: AI 패키지
+```bash
+npm install openai
 ```
 
-### 5. 환경변수 설정
+### 공통: 스타일링 + 네비게이션
+```bash
+npm install nativewind tailwindcss
+npx expo install expo-router expo-linking expo-constants expo-haptics
+```
+
+## 3. 설정 파일 (FE-2)
+
+### tailwind.config.js
+```javascript
+module.exports = {
+  content: ["./app/**/*.{js,jsx,ts,tsx}", "./components/**/*.{js,jsx,ts,tsx}"],
+  theme: { extend: {} },
+  plugins: [],
+};
+```
+
+### babel.config.js
+```javascript
+module.exports = function (api) {
+  api.cache(true);
+  return {
+    presets: ['babel-preset-expo'],
+    plugins: ['nativewind/babel', 'react-native-reanimated/plugin'],
+  };
+};
+```
+
+## 4. 폴더 구조 생성 (FE-2)
+
+```bash
+mkdir -p app/\(tabs\)
+mkdir -p components/{Terrarium/items,Chat,Spirit,Shop,Diary,UI}
+mkdir -p stores hooks lib types
+```
+
+## 5. 환경변수 설정 (AI-1)
+
 ```bash
 cp .env.example .env
-# EXPO_PUBLIC_OPENAI_API_KEY 입력
+# EXPO_PUBLIC_OPENAI_API_KEY=sk-your-key-here
 ```
 
-## 완료 기준
-- [ ] `npx expo start` 실행 성공
-- [ ] Expo Go 앱에서 접속 확인
-- [ ] 폴더 구조 생성 완료
-- [ ] 전원 같은 repo clone 완료
+## 6. Git 설정 (FE-2)
 
-## 커밋
 ```bash
+git init
 git add -A
-git commit -m "chore: initial project setup with Expo SDK 52"
-git push origin main
+git commit -m "chore: initial project setup"
+git remote add origin <repo-url>
+git push -u origin main
 ```
+
+## 7. 확인
+
+- [ ] `npx expo start` 실행 성공
+- [ ] Expo Go 앱에서 접속
+- [ ] 전원 repo clone 완료
 
 ## 다음 단계
-→ Phase 2 시작 (FE-1: phase2-fe1-3d.md, FE-2: phase2-fe2-shop.md)
+
+```
+→ FE-1: fe1-all-tasks.md (Phase 2 시작)
+→ FE-2: fe2-all-tasks.md (Phase 2 시작)
+→ AI-1: ai1-all-tasks.md (Phase 2 준비)
+→ AI-2: ai2-all-tasks.md (Phase 2 콘텐츠 작성)
+```
