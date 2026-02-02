@@ -1,0 +1,65 @@
+---
+description: "Healing Terrarium 프로젝트 전체 규칙"
+globs: "**/*"
+alwaysApply: true
+---
+
+# Healing Terrarium - Project Rules
+
+## 프로젝트 개요
+- **컨셉**: 3D 테라리움 + AI 정령 '초록이' + 감정 루틴
+- **플랫폼**: React Native + Expo (SDK 52)
+- **핵심 기술**: expo-three, OpenAI GPT-4o-mini, Zustand
+
+## 핵심 감정선 (반드시 기억)
+1. **"30초면 충분해"** - 짧게 끝내도 괜찮다
+2. **"초록이가 내 편"** - 판단 없는 공감
+3. **"내가 돌봐서 변했다"** - 정령 상태 변화
+4. **"오늘도 괜찮았다"** - 1줄 일기
+
+## 기술 스택
+```json
+{
+  "framework": "React Native 0.76.x + Expo SDK 52",
+  "3d": "expo-gl + expo-three + three.js",
+  "ai": "OpenAI GPT-4o-mini (streaming)",
+  "state": "Zustand + AsyncStorage",
+  "styling": "NativeWind v4",
+  "ui": "@gorhom/bottom-sheet"
+}
+```
+
+## 폴더 구조
+```
+app/                    # Expo Router
+components/
+├── Terrarium/          # 3D 씬
+│   └── items/          # 3D 아이템
+├── Chat/               # 채팅 UI
+├── Spirit/             # 정령 상태
+├── Shop/               # 상점
+├── Diary/              # 일기
+└── UI/                 # 공통 UI
+stores/                 # Zustand
+hooks/                  # Custom Hooks
+lib/                    # 유틸리티
+types/                  # TypeScript
+```
+
+## 코드 컨벤션
+- 파일명: kebab-case (`spirit-status.tsx`)
+- 컴포넌트: PascalCase (`SpiritStatus`)
+- 함수/변수: camelCase (`getSpiritState`)
+- 한국어 주석 OK
+
+## PRD 참조
+- PRD: `docs/prd/PRD_stone-garden.md` (v5.0)
+- Plan: `docs/todo_plan/PLAN_stone-garden.md`
+
+## 해커톤 시간 관리
+- 11:00-11:20: Phase 1 (환경 설정)
+- 11:20-12:40: Phase 2 (3D + 상점)
+- 12:40-14:00: Phase 3 (AI + 정령)
+- 14:00-15:00: Phase 4 (감정 루틴)
+- 15:00-15:30: Phase 5 (마무리)
+- **15:00 이후 새 기능 금지**

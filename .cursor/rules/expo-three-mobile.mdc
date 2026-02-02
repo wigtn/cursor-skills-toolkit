@@ -1,0 +1,151 @@
+---
+description: "expo-three를 사용한 모바일 3D 렌더링 규칙"
+globs:
+  - "components/Terrarium/**/*.tsx"
+  - "lib/three/**/*.ts"
+alwaysApply: false
+---
+
+# expo-three 모바일 3D 규칙
+
+## 필수 import
+```typescript
+import { GLView, ExpoWebGLRenderingContext } from 'expo-gl';
+import { Renderer } from 'expo-three';
+import * as THREE from 'three';
+```
+
+## TerrariumScene 기본 패턴
+```typescript
+export function TerrariumScene({ items }: { items: string[] }) {
+  const onContextCreate = async (gl: ExpoWebGLRenderingContext) => {
+    // 1. Renderer 생성
+    const renderer = new Renderer({ gl });
+    renderer.setSize(gl.drawingBufferWidth, gl.drawingBufferHeight);
+
+    // 2. Scene + Camera 생성
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(
+      50,
+      gl.drawingBufferWidth / gl.drawingBufferHeight,
+      0.1,
+      100
+    );
+    camera.position.set(0, 2, 5);
+
+    // 3. 조명 추가
+    scene.add(new THREE.AmbientLight(0xffffff, 0.6));
+    const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+    dirLight.position.set(5, 5, 5);
+    scene.add(dirLight);
+
+    // 4. 렌더 루프
+    const animate = () => {
+      requestAnimationFrame(animate);
+      // 자동 회전
+      scene.rotation.y += 0.005;
+      renderer.render(scene, camera);
+      gl.endFrameEXP(); // 필수!
+    };
+    animate();
+  };
+
+  return <GLView style={{ flex: 1 }} onContextCreate={onContextCreate} />;
+}
+```
+
+## 3D 오브젝트 정의
+
+### 유리병 (GlassJar)
+```typescript
+const jarGeometry = new THREE.SphereGeometry(1.5, 32, 32);
+const jarMaterial = new THREE.MeshPhysicalMaterial({
+  color: 0xffffff,
+  transparent: true,
+  opacity: 0.3,
+  roughness: 0,
+  transmission: 0.9,
+});
+```
+
+### 흙 (Soil)
+```typescript
+const soilGeometry = new THREE.CylinderGeometry(1.2, 1.2, 0.3, 32);
+const soilMaterial = new THREE.MeshStandardMaterial({ color: 0x8B4513 });
+```
+
+### 이끼 (Moss) - 구체 클러스터
+```typescript
+function createMoss(): THREE.Group {
+  const group = new THREE.Group();
+  const material = new THREE.MeshStandardMaterial({ color: 0x228B22 });
+
+  for (let i = 0; i < 7; i++) {
+    const sphere = new THREE.Mesh(
+      new THREE.SphereGeometry(0.08, 8, 8),
+      material
+    );
+    sphere.position.set(
+      Math.random() * 0.3 - 0.15,
+      Math.random() * 0.1,
+      Math.random() * 0.3 - 0.15
+    );
+    group.add(sphere);
+  }
+  return group;
+}
+```
+
+### 버섯 (Mushroom) - 반구 + 원기둥
+```typescript
+function createMushroom(): THREE.Group {
+  const group = new THREE.Group();
+
+  // 갓 (반구)
+  const cap = new THREE.Mesh(
+    new THREE.SphereGeometry(0.15, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0xFF6B6B })
+  );
+  cap.position.y = 0.2;
+
+  // 줄기 (원기둥)
+  const stem = new THREE.Mesh(
+    new THREE.CylinderGeometry(0.05, 0.05, 0.2, 8),
+    new THREE.MeshStandardMaterial({ color: 0xFFFFFF })
+  );
+  stem.position.y = 0.1;
+
+  group.add(cap, stem);
+  return group;
+}
+```
+
+## 성능 최적화
+
+### 금지 사항
+- ❌ drei 패키지 사용 (모바일 미지원)
+- ❌ 100+ 폴리곤 메시
+- ❌ 실시간 그림자 (Shadow)
+- ❌ 고해상도 텍스처
+
+### 권장 사항
+- ✅ 단순 geometry만 사용
+- ✅ segment 수 최소화 (16-32)
+- ✅ MeshStandardMaterial 사용
+- ✅ 조명 2개 이하
+
+## GL 미지원 시 폴백
+```typescript
+function Terrarium2DFallback({ items }: { items: string[] }) {
+  return (
+    <View className="items-center justify-center h-80">
+      <Text className="text-6xl">🫙</Text>
+      <View className="absolute">
+        {items.map(id => (
+          <Text key={id}>{ITEMS.find(i => i.id === id)?.emoji}</Text>
+        ))}
+      </View>
+    </View>
+  );
+}
+```
