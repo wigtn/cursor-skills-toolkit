@@ -1,0 +1,176 @@
+---
+description: "4명 팀 협업 워크플로우 - Git 전략, 역할 분담, 인터페이스 계약"
+globs: "**/*"
+alwaysApply: true
+---
+
+# Team Workflow - 4명 병렬 개발
+
+## 팀 구성
+
+| 역할 | 담당 영역 | Phase | 작업 폴더 |
+|------|----------|-------|----------|
+| **FE-1** | 3D 씬, 아이템 | Phase 2 | `components/Terrarium/**` |
+| **FE-2** | 상태, 로직, 일기 | Phase 2, 4 | `stores/`, `hooks/`, `components/Shop/`, `components/Diary/` |
+| **AI-1** | AI 챗봇, 스트리밍 | Phase 3 | `lib/openai.ts`, `hooks/useChat.ts`, `components/Chat/**` |
+| **AI-2** | 콘텐츠, 프롬프트, QA | Phase 3, 5 | `lib/prompts.ts`, `lib/questions.ts`, `lib/spiritResponses.ts` |
+
+## Git 브랜치 전략
+
+### 브랜치 네이밍
+```
+main                          # 프로덕션 (보호됨)
+├── feature/phase1-setup      # Phase 1: 환경 설정
+├── feature/phase2-3d         # Phase 2: FE-1 담당 (3D)
+├── feature/phase2-shop       # Phase 2: FE-2 담당 (상점/상태)
+├── feature/phase3-chat       # Phase 3: AI-1 담당 (챗봇)
+├── feature/phase3-content    # Phase 3: AI-2 담당 (콘텐츠)
+├── feature/phase4-routine    # Phase 4: FE-2 담당 (감정 루틴)
+└── feature/phase5-polish     # Phase 5: 전원
+```
+
+### 브랜치 생성
+```bash
+# 각 담당자가 본인 브랜치 생성
+git checkout main
+git pull origin main
+git checkout -b feature/phase2-3d  # 본인 담당 Phase
+```
+
+### 머지 순서 (의존성 기준)
+
+```
+1. types/ 먼저 머지 (11:20)
+   └── FE-2가 types/game.ts, types/chat.ts, types/items.ts 작성 후 main 머지
+
+2. Phase 2 머지 (12:40)
+   ├── feature/phase2-3d → main (FE-1)
+   └── feature/phase2-shop → main (FE-2)
+
+3. Phase 3 머지 (14:00, 점심 후)
+   ├── feature/phase3-content → main (AI-2, 먼저)
+   ├── feature/phase3-chat → main (AI-1)
+   └── components/Spirit/ → main (FE-2)
+
+4. Phase 4 머지 (15:00)
+   └── feature/phase4-routine → main (FE-2)
+
+5. Phase 5 (15:30)
+   └── 버그 수정은 main에서 직접
+```
+
+## 파일 충돌 방지
+
+### 담당자별 파일 범위 (절대 겹치지 않음)
+
+| 담당자 | 전용 파일/폴더 | 수정 금지 |
+|--------|---------------|----------|
+| **FE-1** | `components/Terrarium/**` | `stores/`, `lib/` |
+| **FE-2** | `stores/`, `hooks/`, `components/Shop/`, `components/Diary/`, `components/UI/` | `components/Terrarium/`, `components/Chat/` |
+| **AI-1** | `lib/openai.ts`, `hooks/useChat.ts`, `components/Chat/**` | `components/Terrarium/`, `stores/` |
+| **AI-2** | `lib/prompts.ts`, `lib/questions.ts`, `lib/spiritResponses.ts` | 모든 컴포넌트 |
+
+### 공유 파일 (수정 전 팀 협의)
+- `app/index.tsx` - 메인 화면 (FE-2 주도)
+- `types/*.ts` - 타입 정의 (FE-2 주도, Phase 2 시작 전 확정)
+- `lib/items.ts` - 아이템 데이터 (FE-2 작성, FE-1 참조)
+
+## 인터페이스 계약
+
+### Phase 2 시작 전 확정 (11:20)
+
+FE-2가 `types/` 먼저 작성하여 main에 머지:
+
+```typescript
+// types/game.ts - 전원 공유
+type SpiritState = 'calm' | 'tired' | 'sparkling';
+
+interface GameState {
+  coins: number;
+  ownedItems: string[];
+  lastVisit: number;
+  consecutiveVisitDays: number;
+  totalChatCount: number;
+  diaryEntries: DiaryEntry[];
+}
+
+// types/items.ts - FE-1, FE-2 공유
+interface TerrariumItem {
+  id: string;
+  name: string;
+  price: number;
+  emotionalFunction: string;
+  emoji: string;
+  geometry: ItemGeometry;
+  color: string;
+}
+```
+
+### 컴포넌트 Props 계약
+
+```typescript
+// FE-1이 만들 컴포넌트 (FE-2가 호출)
+interface TerrariumSceneProps {
+  items: string[];  // ['moss', 'mushroom']
+}
+
+// AI-1이 만들 컴포넌트 (FE-2가 호출)
+interface ChatBottomSheetProps {
+  isOpen: boolean;
+  onClose: () => void;
+}
+
+// FE-2가 만들 컴포넌트 (자체 사용)
+interface ShopBottomSheetProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onPurchase: (itemId: string) => void;
+}
+```
+
+## 환경변수
+
+### 공유 방법
+1. `.env.example` 파일 참고
+2. 각자 `.env` 생성 (gitignore됨)
+3. 해커톤용 API 키는 Slack/Discord로 공유
+
+### 필수 환경변수
+```
+EXPO_PUBLIC_OPENAI_API_KEY=sk-xxx  # AI-1이 팀에 공유
+```
+
+## 커뮤니케이션
+
+### 머지 전 알림
+```
+"FE-1: phase2-3d 머지합니다" → 5분 대기 → 머지
+```
+
+### 충돌 발생 시
+```
+1. 먼저 머지한 사람의 코드 유지
+2. 나중 머지하는 사람이 rebase
+3. 해결 안 되면 FE-2가 중재
+```
+
+### 긴급 상황
+```
+"[긴급] 3D 렌더링 안 됨" → 전원 작업 중단 → 해결 후 재개
+```
+
+## 체크리스트
+
+### Phase 시작 전
+- [ ] main에서 최신 pull
+- [ ] 본인 feature 브랜치 생성
+- [ ] types/ 변경사항 확인
+
+### 머지 전
+- [ ] `npx expo start` 로컬 테스트
+- [ ] 본인 담당 파일만 수정했는지 확인
+- [ ] 팀에 머지 알림
+
+### 머지 후
+- [ ] 다른 팀원 브랜치에 영향 없는지 확인
+- [ ] Expo Go에서 통합 테스트
