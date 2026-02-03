@@ -22,7 +22,7 @@ alwaysApply: true
 {
   "framework": "React Native 0.76.x + Expo SDK 52",
   "3d": "expo-gl + expo-three + three.js",
-  "ai": "OpenAI GPT-4o-mini (streaming)",
+  "ai": "OpenAI GPT-4o-mini (비스트리밍 권장, Expo/RN)",
   "state": "Zustand + AsyncStorage",
   "styling": "NativeWind v4",
   "ui": "@gorhom/bottom-sheet"
@@ -52,9 +52,14 @@ types/                  # TypeScript
 - 함수/변수: camelCase (`getSpiritState`)
 - 한국어 주석 OK
 
-## PRD 참조
+## 문서 참조
 - PRD: `docs/prd/PRD_stone-garden.md` (v5.0)
 - Plan: `docs/todo_plan/PLAN_stone-garden.md`
+- 에러 해결: `.cursor/knowledge/error-solutions.md`
+- 트러블슈팅: `.cursor/rules/troubleshooting.mdc`
+- **AI-1 작업(챗봇/에러 교훈)**: `.cursor/commands/ai1-all-tasks.md` — "에러 없이 빠르게 구현하기" 섹션 필수 참고 (API 키 검증, 비스트리밍 권장, HTTP status 우선 에러 분류)
+- 빌드 로그: `docs/build-logs/`
+- 회고 문서: `docs/post-mortem/`
 
 ## 해커톤 시간 관리
 - 11:00-11:20: Phase 1 (환경 설정)
@@ -63,3 +68,9 @@ types/                  # TypeScript
 - 14:00-15:00: Phase 4 (감정 루틴)
 - 15:00-15:30: Phase 5 (마무리)
 - **15:00 이후 새 기능 금지**
+
+## 에러 로깅 규칙 (필수)
+1. **에러 발생 시**: `.cursor/knowledge/error-solutions.md`에 기록
+2. **트러블슈팅 참조**: `.cursor/rules/troubleshooting.mdc` 먼저 확인
+3. **빌드 로그 작성**: Phase별로 `docs/build-logs/`에 기록
+4. **구축 완료 후**: `docs/post-mortem/TEMPLATE.md` 복사하여 회고 작성
