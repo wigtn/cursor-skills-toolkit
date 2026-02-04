@@ -1,0 +1,87 @@
+.emotion-bubble {
+  position: absolute;
+  top: 25%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(255, 255, 255, 0.95);
+  border-radius: 20px;
+  padding: 16px 28px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+  z-index: 100;
+  animation: bubble-appear 0.3s ease-out;
+}
+
+.emotion-bubble.calm {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+}
+
+.emotion-bubble.excited {
+  background: linear-gradient(135deg, #fff5f5 0%, #ffe3e3 100%);
+  animation: bubble-bounce 0.5s ease-out;
+}
+
+.emotion-text {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: #495057;
+  letter-spacing: 4px;
+}
+
+.emotion-bubble.excited .emotion-text {
+  color: #e64980;
+}
+
+.bubble-tail {
+  position: absolute;
+  bottom: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 0;
+  height: 0;
+  border-left: 12px solid transparent;
+  border-right: 12px solid transparent;
+  border-top: 12px solid #e9ecef;
+}
+
+.emotion-bubble.excited .bubble-tail {
+  border-top-color: #ffe3e3;
+}
+
+@keyframes bubble-appear {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(10px) scale(0.8);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+@keyframes bubble-bounce {
+  0% {
+    opacity: 0;
+    transform: translateX(-50%) translateY(20px) scale(0.5);
+  }
+  50% {
+    transform: translateX(-50%) translateY(-5px) scale(1.05);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0) scale(1);
+  }
+}
+
+.emotion-bubble.animating .emotion-text {
+  animation: typing-pulse 0.3s ease-in-out infinite;
+}
+
+@keyframes typing-pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}

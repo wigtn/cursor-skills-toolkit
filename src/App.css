@@ -1,0 +1,163 @@
+.app {
+  width: 100vw;
+  height: 100vh;
+  position: relative;
+  overflow: hidden;
+}
+
+.app canvas {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+/* 타이틀 */
+.title {
+  position: absolute;
+  top: 30px;
+  left: 50%;
+  transform: translateX(-50%);
+  text-align: center;
+  z-index: 10;
+  pointer-events: none;
+}
+
+.title h1 {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 24px;
+  font-weight: 800;
+  color: #37474f;
+  margin: 0;
+  letter-spacing: 2px;
+}
+
+.title p {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 13px;
+  color: rgba(55, 71, 79, 0.6);
+  margin: 6px 0 0 0;
+}
+
+/* 현재 상태 표시 */
+.current-state {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -200%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 28px;
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  z-index: 10;
+  pointer-events: none;
+}
+
+.state-emoji {
+  font-size: 36px;
+}
+
+.state-name {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 16px;
+  font-weight: 700;
+  color: #37474f;
+}
+
+/* 애니메이션 컨트롤 */
+.animation-controls {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 10px;
+  max-width: 90%;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 20px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(10px);
+  z-index: 10;
+}
+
+.anim-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  padding: 10px 14px;
+  border: 2px solid transparent;
+  border-radius: 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: rgba(236, 239, 241, 0.8);
+}
+
+.anim-btn:hover {
+  background: rgba(255, 255, 255, 1);
+  border-color: #90caf9;
+  transform: translateY(-2px);
+}
+
+.anim-btn.active {
+  background: #e3f2fd;
+  border-color: #42a5f5;
+  box-shadow: 0 2px 10px rgba(66, 165, 245, 0.3);
+}
+
+.anim-emoji {
+  font-size: 22px;
+}
+
+.anim-name {
+  font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 11px;
+  font-weight: 600;
+  color: #546e7a;
+}
+
+.anim-btn.active .anim-name {
+  color: #1976d2;
+}
+
+/* 반응형 */
+@media (max-width: 600px) {
+  .title h1 {
+    font-size: 20px;
+  }
+
+  .animation-controls {
+    bottom: 20px;
+    padding: 12px;
+    gap: 8px;
+  }
+
+  .anim-btn {
+    padding: 8px 10px;
+  }
+
+  .anim-emoji {
+    font-size: 18px;
+  }
+
+  .anim-name {
+    font-size: 10px;
+  }
+
+  .current-state {
+    padding: 12px 20px;
+  }
+
+  .state-emoji {
+    font-size: 28px;
+  }
+
+  .state-name {
+    font-size: 14px;
+  }
+}
