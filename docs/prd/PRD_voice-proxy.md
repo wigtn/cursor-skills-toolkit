@@ -251,7 +251,7 @@ Scenario: 빠른 응답 템플릿 사용
 
 | Layer | Technology | Reason |
 |-------|------------|--------|
-| Frontend | Next.js 14 (App Router) | SSR, React Server Components |
+| Frontend | Next.js 16 (App Router) | SSR, React Server Components |
 | Styling | Tailwind CSS + shadcn/ui | 빠른 개발, 접근성 컴포넌트 |
 | Real-time | WebSocket (Socket.io) | 양방향 실시간 통신 |
 | Backend | Next.js API Routes | 풀스택 단일 배포 |
