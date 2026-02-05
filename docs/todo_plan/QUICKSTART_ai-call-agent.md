@@ -236,7 +236,7 @@ ai-call-agent/
 4. 통화가 끝나면 결과를 보여줍니다.
 
 [기술 스택]
-- Next.js 14 + Tailwind CSS
+- Next.js 16 + Tailwind CSS
 - ElevenLabs Conversational AI
 - OpenAI GPT-4 (파싱)
 

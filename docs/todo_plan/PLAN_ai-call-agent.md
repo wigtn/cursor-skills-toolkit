@@ -74,7 +74,7 @@
 > **전원 함께** - 한 명이 리드, 나머지는 환경 확인
 
 ### 리더 (BE1) 작업
-- [ ] 0.1 Next.js 14 프로젝트 생성
+- [ ] 0.1 Next.js 16 프로젝트 생성
 - [ ] 0.2 Tailwind CSS + shadcn/ui 설치
 - [ ] 0.3 Prisma 설정 + SQLite
 - [ ] 0.4 기본 디렉토리 구조 생성
@@ -196,7 +196,7 @@
 
 | Layer | Technology |
 |-------|------------|
-| Frontend | Next.js 14 (App Router) |
+| Frontend | Next.js 16 (App Router) |
 | Styling | Tailwind CSS + shadcn/ui |
 | Backend | Next.js API Routes |
 | Database | **SQLite** (Prisma) |

@@ -377,7 +377,7 @@ Scenario: 통화 실패 처리
 
 | Layer | Technology | Reason |
 |-------|------------|--------|
-| Frontend | Next.js 14 (App Router) | SSR, React Server Components |
+| Frontend | Next.js 16 (App Router) | SSR, React Server Components |
 | Styling | Tailwind CSS + shadcn/ui | 빠른 개발 |
 | Backend | Next.js API Routes | 풀스택 단일 배포 |
 | Database | PostgreSQL | 안정성, 확장성 |
