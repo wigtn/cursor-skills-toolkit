@@ -1,0 +1,389 @@
+---
+description: FE-2 역할 - 3D 웹 씬 (React Three Fiber + GLB + Stone 감정)
+globs: web/src/components/**, web/public/**, web/src/App.css, web/src/index.css
+alwaysApply: false
+---
+
+# FE-2: 3D 웹 씬 담당
+# 적용 경로: web/src/components/**, web/public/**, CSS 파일
+
+## 담당 영역
+- `web/src/components/` 모든 컴포넌트
+- `web/public/` (모델, 에셋)
+- `web/src/App.css`, `web/src/index.css`
+- 3D 씬 구성, GLB 모델, 애니메이션, 감정 표현, UI 스타일
+
+## 파일 구조 (실제 구현 기준)
+```
+web/src/components/
+├── Scene.tsx               # 3D 씬 조합 (조명, 환경, 캐릭터 배치)
+├── Robot.tsx               # 로봇(또봇) GLB + 13개 애니메이션
+├── ForestHouse.tsx         # 숲/집 배경 GLB
+├── Stone.tsx               # 돌돌이 캐릭터 (감정별 애니메이션)
+├── EmotionBubble.tsx       # 감정 말풍선 (타이핑 애니메이션)
+└── EmotionBubble.css       # 말풍선 스타일
+
+web/public/models/
+├── RobotExpressive.glb     # 로봇 모델 (Idle, Walking, Dance 등)
+└── forest_house.glb        # 숲/집 배경 모델
+```
+
+## 핵심 컴포넌트 구현 패턴
+
+### Scene.tsx — 3D 씬 조합
+```typescript
+import { useThree } from '@react-three/fiber';
+import { OrbitControls, Environment, useGLTF } from '@react-three/drei';
+import { Color } from 'three';
+import Robot, { RobotAnimation } from './Robot';
+import Stone from './Stone';
+import { StoneEmotion } from '../../shared/types';
+
+interface SceneProps {
+  animation?: RobotAnimation;
+  stoneEmotion?: StoneEmotion;
+}
+
+function Scene({ animation = 'Idle', stoneEmotion = 'calm' }: SceneProps) {
+  const { gl } = useThree();
+  gl.setClearColor(new Color('#87CEEB')); // 하늘색 배경
+
+  return (
+    <>
+      {/* 조명 */}
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[10, 20, 10]} intensity={1.5} castShadow />
+      <hemisphereLight args={['#87CEEB', '#8B4513', 0.5]} />
+
+      {/* 환경 */}
+      <Environment preset="sunset" />
+
+      {/* 모델 배치 */}
+      <ForestHouse />
+      <Robot animation={animation} position={[-0.2, 0.36, 1.8]} scale={0.2} />
+      <Stone emotion={stoneEmotion} position={[0.5, 0.5, 2]} />
+
+      {/* 카메라 컨트롤 */}
+      <OrbitControls
+        enablePan
+        enableZoom
+        minDistance={1}
+        maxDistance={30}
+        target={[0, 1.5, 1.5]}
+      />
+    </>
+  );
+}
+```
+
+### Robot.tsx — GLB + 애니메이션 전환
+```typescript
+import { useRef, useEffect, useMemo } from 'react';
+import { useGLTF, useAnimations } from '@react-three/drei';
+import { Group } from 'three';
+import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js';
+
+// 사용 가능한 애니메이션 (13개)
+export const ROBOT_ANIMATIONS = [
+  'Idle', 'Walking', 'Running', 'Dance', 'Death',
+  'Sitting', 'Standing', 'Jump', 'Yes', 'No',
+  'Wave', 'Punch', 'ThumbsUp',
+] as const;
+export type RobotAnimation = typeof ROBOT_ANIMATIONS[number];
+
+function Robot({ animation = 'Idle', position = [0, -1, 0], scale = 0.5 }) {
+  const group = useRef<Group>(null);
+  const { scene, animations } = useGLTF('/models/RobotExpressive.glb');
+
+  // 필수: SkeletonUtils.clone으로 씬 복제 (여러 인스턴스 대응)
+  const clonedScene = useMemo(() => SkeletonUtils.clone(scene), [scene]);
+  const { actions } = useAnimations(animations, group);
+
+  // 애니메이션 전환: fadeOut → reset → fadeIn → play
+  useEffect(() => {
+    if (!actions) return;
+    Object.values(actions).forEach(action => action?.fadeOut(0.2));
+    actions[animation]?.reset().fadeIn(0.2).play();
+  }, [animation, actions]);
+
+  return (
+    <group ref={group} position={position} scale={scale}>
+      <primitive object={clonedScene} />
+    </group>
+  );
+}
+
+useGLTF.preload('/models/RobotExpressive.glb');
+```
+
+### Stone.tsx — 돌돌이 감정 반응 캐릭터 (신규/확장)
+```typescript
+import { useRef, useState } from 'react';
+import { useFrame } from '@react-three/fiber';
+import { Group, Mesh, MeshStandardMaterial, Color } from 'three';
+import { StoneEmotion } from '../../shared/types';
+
+interface StoneProps {
+  emotion?: StoneEmotion;
+  position?: [number, number, number];
+}
+
+// 감정별 색상 매핑
+const EMOTION_COLORS: Record<StoneEmotion, string> = {
+  calm: '#8B9DC3',     // 차분한 블루그레이
+  happy: '#FFD93D',    // 밝은 노랑
+  sad: '#6B7AA1',      // 어두운 블루그레이
+  excited: '#FF6B6B',  // 활기찬 코랄
+  sleepy: '#C4B0FF',   // 졸린 연보라
+};
+
+function Stone({ emotion = 'calm', position = [0, 0, 0] }: StoneProps) {
+  const groupRef = useRef<Group>(null);
+  const bodyRef = useRef<Mesh>(null);
+  const [hovered, setHovered] = useState(false);
+
+  useFrame((state, delta) => {
+    if (!groupRef.current || !bodyRef.current) return;
+
+    const time = state.clock.getElapsedTime();
+
+    switch (emotion) {
+      case 'calm':
+        // 천천히 호흡 (scale.y sin wave)
+        groupRef.current.scale.y = 1 + Math.sin(time * 0.5) * 0.02;
+        groupRef.current.rotation.z = 0;
+        break;
+
+      case 'happy':
+        // 위아래 통통 뛰기 + 밝은 색상
+        groupRef.current.position.y = position[1] + Math.abs(Math.sin(time * 3)) * 0.1;
+        groupRef.current.scale.setScalar(1 + Math.sin(time * 6) * 0.05);
+        break;
+
+      case 'sad':
+        // 축 처진 자세 + 느린 좌우 흔들림
+        groupRef.current.scale.y = 0.9;
+        groupRef.current.rotation.z = Math.sin(time * 0.3) * 0.05;
+        groupRef.current.position.y = position[1] - 0.05;
+        break;
+
+      case 'excited':
+        // 빠르게 통통 뛰기 + 회전
+        groupRef.current.position.y = position[1] + Math.abs(Math.sin(time * 5)) * 0.15;
+        groupRef.current.rotation.y += delta * 2;
+        groupRef.current.scale.setScalar(1 + Math.sin(time * 8) * 0.08);
+        break;
+
+      case 'sleepy':
+        // 좌우 흔들림 + 천천히 눈 감기 (scale 축소)
+        groupRef.current.rotation.z = Math.sin(time * 0.8) * 0.1;
+        groupRef.current.scale.y = 0.95 + Math.sin(time * 0.3) * 0.02;
+        break;
+    }
+
+    // 호버 시 살짝 커짐
+    const targetScale = hovered ? 1.1 : 1;
+    groupRef.current.scale.lerp({ x: targetScale, y: targetScale, z: targetScale }, 0.1);
+
+    // 색상 변경
+    const material = bodyRef.current.material as MeshStandardMaterial;
+    material.color.lerp(new Color(EMOTION_COLORS[emotion]), 0.05);
+  });
+
+  return (
+    <group
+      ref={groupRef}
+      position={position}
+      onPointerOver={() => setHovered(true)}
+      onPointerOut={() => setHovered(false)}
+    >
+      {/* 몸체: 둥근 돌 */}
+      <mesh ref={bodyRef} castShadow>
+        <sphereGeometry args={[0.4, 32, 32]} />
+        <meshStandardMaterial
+          color={EMOTION_COLORS[emotion]}
+          roughness={0.8}
+          metalness={0.1}
+        />
+      </mesh>
+
+      {/* 머리 위: 납작한 부분 */}
+      <mesh position={[0, 0.35, 0]}>
+        <sphereGeometry args={[0.25, 32, 32]} />
+        <meshStandardMaterial color="#9BAFD9" roughness={0.8} />
+      </mesh>
+
+      {/* 눈 (왼쪽) */}
+      <group position={[-0.12, 0.15, 0.35]}>
+        <mesh>
+          <sphereGeometry args={[0.08, 16, 16]} />
+          <meshStandardMaterial color="#ffffff" />
+        </mesh>
+        <mesh position={[0, 0, 0.05]}>
+          <sphereGeometry args={[0.04, 16, 16]} />
+          <meshStandardMaterial color="#333333" />
+        </mesh>
+        <mesh position={[0.02, 0.02, 0.08]}>
+          <sphereGeometry args={[0.015, 8, 8]} />
+          <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.5} />
+        </mesh>
+      </group>
+
+      {/* 눈 (오른쪽) */}
+      <group position={[0.12, 0.15, 0.35]}>
+        <mesh>
+          <sphereGeometry args={[0.08, 16, 16]} />
+          <meshStandardMaterial color="#ffffff" />
+        </mesh>
+        <mesh position={[0, 0, 0.05]}>
+          <sphereGeometry args={[0.04, 16, 16]} />
+          <meshStandardMaterial color="#333333" />
+        </mesh>
+        <mesh position={[0.02, 0.02, 0.08]}>
+          <sphereGeometry args={[0.015, 8, 8]} />
+          <meshStandardMaterial color="#ffffff" emissive="#ffffff" emissiveIntensity={0.5} />
+        </mesh>
+      </group>
+
+      {/* 볼터치 (왼쪽) */}
+      <mesh position={[-0.25, 0.05, 0.3]} rotation={[0, 0.3, 0]}>
+        <circleGeometry args={[0.06, 16]} />
+        <meshStandardMaterial color="#FFB6C1" transparent opacity={0.6} />
+      </mesh>
+
+      {/* 볼터치 (오른쪽) */}
+      <mesh position={[0.25, 0.05, 0.3]} rotation={[0, -0.3, 0]}>
+        <circleGeometry args={[0.06, 16]} />
+        <meshStandardMaterial color="#FFB6C1" transparent opacity={0.6} />
+      </mesh>
+    </group>
+  );
+}
+
+export default Stone;
+```
+
+### 감정별 애니메이션 정리
+
+| 감정 | 애니메이션 | 색상 | 설명 |
+|------|-----------|------|------|
+| calm | scale.y sin wave (0.5Hz) | #8B9DC3 | 천천히 호흡하는 듯한 움직임 |
+| happy | position.y bounce (3Hz) + scale pulse | #FFD93D | 위아래 통통 뛰기, 밝은 노랑 |
+| sad | scale.y 0.9, rotation.z sway | #6B7AA1 | 축 처진 자세, 어두운 색상 |
+| excited | fast bounce (5Hz) + rotation.y spin | #FF6B6B | 빠른 점프, 회전, 활기찬 코랄 |
+| sleepy | rotation.z sway (0.8Hz) + scale.y shrink | #C4B0FF | 졸린 듯 좌우 흔들림, 연보라 |
+
+### EmotionBubble.tsx — 타이핑 말풍선
+```typescript
+import { useState, useEffect } from 'react';
+import { StoneEmotion } from '../../shared/types';
+import './EmotionBubble.css';
+
+interface EmotionBubbleProps {
+  emotion: StoneEmotion;
+  visible: boolean;
+  text?: string;
+}
+
+const EMOTION_EMOJIS: Record<StoneEmotion, string> = {
+  calm: '😌',
+  happy: '😊',
+  sad: '😢',
+  excited: '🤩',
+  sleepy: '😴',
+};
+
+function EmotionBubble({ emotion, visible, text }: EmotionBubbleProps) {
+  const [displayText, setDisplayText] = useState('');
+  const emoji = EMOTION_EMOJIS[emotion];
+  const typeSpeed = emotion === 'excited' ? 50 : 100;
+
+  // 타이핑 애니메이션
+  useEffect(() => {
+    if (!visible || !text) {
+      setDisplayText('');
+      return;
+    }
+
+    let index = 0;
+    const interval = setInterval(() => {
+      setDisplayText(text.slice(0, index + 1));
+      index++;
+      if (index >= text.length) clearInterval(interval);
+    }, typeSpeed);
+
+    return () => clearInterval(interval);
+  }, [text, visible, typeSpeed]);
+
+  if (!visible) return null;
+
+  return (
+    <div className={`emotion-bubble emotion-${emotion}`}>
+      <span className="emoji">{emoji}</span>
+      {text && <span className="text">{displayText}</span>}
+    </div>
+  );
+}
+```
+
+## 스타일 규칙
+
+### App.css 핵심
+```css
+.app { width: 100vw; height: 100vh; position: relative; overflow: hidden; }
+.app canvas { width: 100% !important; height: 100% !important; }
+
+/* Canvas 배경 그라데이션 */
+canvas { background: linear-gradient(to bottom, #e8f4f8, #d4e8ed); }
+
+/* 제목: absolute, 가운데, pointer-events none */
+/* 애니메이션 버튼: absolute bottom, flex wrap, backdrop-filter blur */
+/* 반응형: @media (max-width: 600px) 축소 */
+```
+
+### index.css 필수 리셋
+```css
+* { margin: 0; padding: 0; box-sizing: border-box; }
+html, body, #root { width: 100%; height: 100%; overflow: hidden; }
+body { font-family: 'Pretendard', sans-serif; -webkit-font-smoothing: antialiased; }
+canvas { user-select: none; touch-action: none; }
+/* 터치 하이라이트 제거, 스크롤바 숨김 */
+```
+
+## 3D 성능 규칙 (모바일 WebView 대응)
+- GLB 모델은 `public/models/`에 배치, Vite가 정적 서빙
+- `useGLTF.preload()` 필수 — 초기 로딩 개선
+- SkeletonUtils.clone 필수 — 모델 인스턴스 복제
+- 애니메이션 전환: fadeOut(0.2) → fadeIn(0.2) (부드럽게)
+- useFrame 내부에서 무거운 연산 금지
+- OrbitControls: minDistance/maxDistance 설정 필수
+- 그림자: directionalLight에만 castShadow (필요 최소한)
+
+## 캐릭터 감정 매핑 (animationInfo)
+```typescript
+import { ANIMATION_INFO } from '../../shared/types';
+
+// shared/types.ts에 정의된 ANIMATION_INFO 사용
+// Idle, Walking, Running, Dance, Jump, Wave 등 13개 애니메이션
+```
+
+## 수정 금지 영역
+- `app/` 폴더 전체 (FE-1 담당)
+- `web/src/App.tsx` (AI-1 담당)
+- `web/src/main.tsx` (AI-1 담당)
+- `shared/` 타입 정의 (AI-2 담당)
+- 메시지 규격 변경
+
+## 의존성 (web/package.json)
+```json
+{
+  "dependencies": {
+    "@react-three/drei": "^10.7.7",
+    "@react-three/fiber": "^9.5.0",
+    "@types/three": "^0.182.0",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "three": "^0.182.0"
+  }
+}
+```

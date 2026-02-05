@@ -1,22 +1,22 @@
-# Task Plan: Healing Terrarium (Emotional Healing Edition)
+# Task Plan: Stone Buddy (Healing Game Edition)
 
-> **Generated from**: docs/prd/PRD_stone-garden.md v5.0
+> **Generated from**: docs/prd/PRD_stone-garden.md v6.0
 > **Created**: 2026-02-02
-> **Updated**: 2026-02-02
+> **Updated**: 2026-02-05
 > **Status**: pending
 > **Hackathon**: Cursor Seoul Hackathon (2026-02-07)
-> **Team**: 4명 (AI-1, AI-2, FE-1, FE-2)
-> **Edition**: Emotional Healing Edition
+> **Team**: 4명 (FE-1, FE-2, AI-1, AI-2)
+> **Edition**: Healing Game — 돌 키우기 + 로봇 집사 + 코인 경제 + 음성 편지
 
 ## Core Concept
 
-**"작은 자연 + 소유감 + AI 공감 대화 + 감정 루틴"**
+**"로봇 집사에게 채팅으로 명령 → 돌돌이를 돌보고 → 코인으로 테라리움 꾸미기 → 돌에게 말 걸면 편지가 오는 힐링 게임"**
 
-핵심 감정선:
-- "30초면 충분해" - 짧게 끝내도 괜찮다
-- "초록이가 내 편" - 판단 없는 공감
-- "내가 돌봐서 변했다" - 정령 상태 변화
-- "오늘도 괜찮았다" - 1줄 일기
+핵심 게임 루프:
+- **명령**: 채팅으로 또봇에게 10가지 워크플로우 요청
+- **경제**: 1분/1코인 적립 → 상점에서 아이템 구매
+- **적용**: 구매한 아이템을 또봇에게 "~해줘" 요청
+- **편지**: 돌돌이에게 말 걸기 → 시간 후 우편함에 편지 도착
 
 ---
 
@@ -33,256 +33,227 @@
 
 ## Team Assignment
 
-| 역할 | 코드명 | 담당 영역 | Phase 집중 | 핵심 기술 |
-|---|---|---|---|---|
-| 프론트엔드 | **FE-1** | **3D 씬 리드**, 아이템 | Phase 2 | **expo-three, Three.js** |
-| 풀스택 | **FE-2** | Zustand, 게임 로직, 일기 시스템 | Phase 2, 4 | Zustand, AsyncStorage |
-| AI 개발자 | **AI-1** | **AI 챗봇**, 스트리밍 | Phase 3 | **OpenAI API** |
-| AI 개발자 | **AI-2** | 콘텐츠(프롬프트, 질문, 멘트), QA | Phase 3, 5 | 프롬프트 엔지니어링 |
-
-**사전 준비**:
-- FE-1: expo-three 기본 예제 실행
-- AI-1: OpenAI 스트리밍 API 테스트
-- AI-2: 프롬프트/질문/멘트 최종 검토
+| 역할 | 담당 영역 | Phase 집중 | 핵심 기술 |
+|------|-----------|-----------|-----------|
+| **FE-1** | Expo WebView, 채팅 입력, 녹음/STT | Phase 2 | Expo, react-native-webview |
+| **FE-2** | 3D 씬 (Robot, Stone, Background, Mailbox, Items) | Phase 2 | R3F, drei, Three.js |
+| **AI-1** | 또봇 AI 명령 해석, 편지 LLM 생성, 상태 관리 | Phase 3 | OpenAI API, Zustand |
+| **AI-2** | 타입 확정, 상점 UI, 코인 시스템, 문서/QA | Phase 3 | TypeScript, 프롬프트 |
 
 ---
 
-## Timeline (5시간)
+## Timeline (6시간)
 
 ```
-11:00 ─────────────────────────────────────────────────────────── 16:00
-  │                                                                 │
-  │ P1 │    Phase 2     │    Phase 3     │   Phase 4   │    P5    │
-  │20m │   1h 20m       │   1h 20m       │     1h      │   30m    │
-  │    │                │                │             │          │
-  └────┴────────────────┴────────────────┴─────────────┴──────────┘
-       11:20           12:40            14:00        15:00       15:30
-                        │
-                    점심+머지
-                    (13:00-13:30)
+0:00 ─────────────────────────────────────────────────────────── 6:00
+  │                                                                │
+  │ P1 │      Phase 2       │      Phase 3       │  P4   │   P5  │
+  │20m │     1h 40m          │     1h 30m          │  1h   │  30m  │
+  │    │                     │                     │       │       │
+  └────┴─────────────────────┴─────────────────────┴───────┴───────┘
+       0:20                 2:00                  3:30   4:30    5:00
+                             │                                  5:30~6:00 시연
+                        통합 체크포인트
 ```
 
 ---
 
 ## Phases
 
-### Phase 1: 환경 설정 (11:00 ~ 11:20) — 20분
+### Phase 1: 환경 설정 (0:00 ~ 0:20) — 20분
 
-**담당**: FE-1 (리드) + 전원 동시 작업
+**담당**: 전원 동시 작업
 
-| Task | 담당 | Parallel | 의존성 |
-|------|------|----------|--------|
-| Expo 프로젝트 생성 | FE-1 | - | - |
-| 3D 패키지 설치 (expo-gl, expo-three, three) | FE-1 | Agent 1 | Task 1 |
-| NativeWind v4 설정 | FE-1 | Agent 1 | Task 1 |
-| Zustand + AsyncStorage 설치 | FE-2 | Agent 2 | Task 1 |
-| OpenAI 패키지 설치 | AI-1 | Agent 2 | Task 1 |
-| 환경변수 설정 (OPENAI_API_KEY) | AI-1 | Agent 3 | Task 1 |
-| 폴더 구조 생성 | FE-2 | Agent 3 | Task 1 |
-| Git 초기화 + GitHub push | FE-2 | - | Task 1-7 |
-| EAS Build 설정 | FE-2 | - | Task 8 |
+| Task | 담당 | 의존성 |
+|------|------|--------|
+| Expo 프로젝트 생성 (`app/`) | FE-1 | - |
+| Vite + R3F 프로젝트 생성 (`web/`) | FE-2 | - |
+| R3F 패키지 설치 (three, @react-three/fiber, @react-three/drei) | FE-2 | Task 2 |
+| Zustand + AsyncStorage 설치 | AI-1 | Task 2 |
+| OpenAI 패키지 설정 + .env | AI-1 | Task 1 |
+| shared/ 타입 최종 확인 | AI-2 | - |
+| GLB 모델 다운로드 + 배치 | FE-2 | Task 2 |
+| Git 브랜치 생성 + 초기 커밋 | AI-2 | All |
 
 **Completion Criteria**:
-- [ ] `npx expo start` 로컬 실행 확인
-- [ ] Expo Go 앱에서 접속 확인
+- [ ] `cd web && npm run dev` → http://localhost:5173 정상
+- [ ] `cd app && npx expo start` → 시뮬레이터 정상
+- [ ] GLB 파일 존재 확인 (`web/public/models/RobotExpressive.glb`)
 - [ ] 전원 같은 repo clone 완료
 
-**Commit Message**: `chore: initial project setup with Expo + expo-three`
+**Commit**: `chore: initial project setup with Expo + Vite R3F`
 
 ---
 
-### Phase 2: 3D 테라리움 + 상점 (11:20 ~ 12:40) — 1시간 20분
+### Phase 2: 3D 씬 + Expo 앱 (0:20 ~ 2:00) — 1시간 40분
 
-**담당**: FE-1 (3D 리드) + FE-2 (상태/로직)
+**담당**: FE-1 (Expo 앱) + FE-2 (3D 씬) 병렬 작업
 
-| Task | 담당 | Parallel Agent | 우선순위 |
-|------|------|----------------|----------|
-| **TerrariumScene.tsx (GLView)** | FE-1 | Agent 1 | P0 |
-| **GlassJar.tsx (유리병)** | FE-1 | Agent 1 | P0 |
-| **Soil.tsx (흙)** | FE-1 | Agent 1 | P0 |
-| **Moss.tsx (이끼)** | FE-1 | Agent 2 | P0 |
-| **Succulent.tsx (다육이)** | FE-1 | Agent 2 | P0 |
-| **Mushroom.tsx (버섯)** | FE-1 | Agent 2 | P0 |
-| **Pebbles.tsx (자갈)** | FE-1 | Agent 2 | P0 |
-| CoinCounter 컴포넌트 | FE-2 | Agent 3 | P0 |
-| 메인 화면 (app/index.tsx) | FE-2 | Agent 3 | P0 |
-| ShopBottomSheet (감정 기능 표시) | FE-2 | Agent 3 | P0 |
-| ItemCard (감정 기능 1줄) | FE-2 | Agent 3 | P0 |
-| gameStore (Zustand) | FE-2 | Agent 4 | P0 |
-| useCoinTimer 훅 | FE-2 | Agent 4 | P0 |
-| items.ts (감정 기능 포함 6종) | FE-2 | Agent 4 | P0 |
+#### FE-1 Tasks (Expo 네이티브)
 
-**Parallel Agent 전략 (4x 병렬)**:
-```
-Agent 1 (FE-1): "components/Terrarium/ 폴더에 TerrariumScene.tsx, GlassJar.tsx, Soil.tsx를 만들어줘.
-          expo-three + GLView 사용. 유리병은 투명 구체(MeshPhysicalMaterial), 흙은 갈색 원기둥.
-          자동 회전 카메라 적용."
+| Task | 우선순위 |
+|------|----------|
+| WebView 기본 설정 (전체 화면, 5173 연결) | P0 |
+| 채팅 입력 UI (TextInput + 전송 버튼) | P0 |
+| TEXT_INPUT 메시지 전송 로직 | P0 |
+| 녹음 버튼 UI (탭하여 녹음) | P0 |
+| expo-audio 녹음 로직 | P0 |
+| Whisper STT API 연동 | P0 |
+| VOICE_RESULT 메시지 전송 | P0 |
+| 코인 카운터 표시 (네이티브 상단) | P1 |
 
-Agent 2 (FE-1): "components/Terrarium/items/ 폴더에 Moss.tsx, Succulent.tsx, Mushroom.tsx, Pebbles.tsx를 만들어줘.
-          이끼: 초록 구체 클러스터, 다육이: 로제트 형태, 버섯: 반구+원기둥, 자갈: 회색 구체들"
+#### FE-2 Tasks (3D 웹 씬)
 
-Agent 3 (FE-2): "CoinCounter, 메인 화면, ShopBottomSheet, ItemCard를 만들어줘.
-          @gorhom/bottom-sheet 사용. ItemCard에 '감정 기능' 1줄 표시 (예: '말을 줄이고 싶은 날')"
+| Task | 우선순위 |
+|------|----------|
+| Scene.tsx (전체 씬 조합) | P0 |
+| Robot.tsx (또봇 GLB + 13 애니메이션) | P0 |
+| Stone.tsx (돌돌이 + 5가지 감정 표현) | P0 |
+| Background.tsx (테라리움 배경) | P0 |
+| Mailbox.tsx (우편함 오브젝트) | P0 |
+| EmotionBubble.tsx (감정 말풍선) | P1 |
+| 환경 아이템 컴포넌트 (Moss, Flower 등) | P1 |
+| 카메라 + 조명 설정 | P0 |
 
-Agent 4 (FE-2): "stores/gameStore.ts, hooks/useCoinTimer.ts, lib/items.ts를 만들어줘.
-          items.ts에 emotionalFunction 필드 포함. Zustand persist + AsyncStorage."
-```
+**2:00 통합 체크포인트**:
+- [ ] WebView에 3D 씬 렌더링 확인
+- [ ] 로봇(또봇) 애니메이션 동작 확인
+- [ ] 돌돌이 감정별 표현 확인
+- [ ] 채팅 입력 → WebView 전달 확인
+- [ ] 녹음 → STT 변환 확인
+
+**Commit**: `feat: 3D terrarium scene + Expo WebView + chat input`
+
+---
+
+### Phase 3: AI + 게임 로직 (2:00 ~ 3:30) — 1시간 30분
+
+**담당**: AI-1 (AI 연동) + AI-2 (상점/코인) 병렬 작업
+
+#### AI-1 Tasks (AI/상태 관리)
+
+| Task | 우선순위 |
+|------|----------|
+| lib/openai.ts (API 클라이언트) | P0 |
+| 또봇 명령 해석 로직 (GPT-4o-mini JSON 응답) | P0 |
+| 10개 워크플로우 매핑 (action → animation) | P0 |
+| web/src/App.tsx 메시지 수신 + 처리 | P0 |
+| 돌돌이 편지 생성 로직 (LLM) | P0 |
+| 편지 대기 → 도착 타이머 (데모 10초) | P0 |
+| Zustand gameStore (코인, 인벤토리, 감정, 편지) | P0 |
+| ROBOT_RESPONSE / STONE_EMOTION_CHANGED 전송 | P0 |
+| LETTER_READY 메시지 전송 | P0 |
+
+#### AI-2 Tasks (상점/코인/타입)
+
+| Task | 우선순위 |
+|------|----------|
+| 코인 자동 적립 훅 (useCoinTimer) | P0 |
+| 상점 UI (BottomSheet or 모달) | P0 |
+| 아이템 카드 컴포넌트 (가격, 구매 버튼) | P0 |
+| 구매 로직 (코인 차감 → 인벤토리 추가) | P0 |
+| 인벤토리 UI (보유 아이템 목록) | P0 |
+| 우편함 UI (편지 목록, 읽기) | P1 |
+| AsyncStorage 저장/로드 | P0 |
 
 **Completion Criteria**:
-- [ ] **3D 테라리움 자동 회전 표시**
-- [ ] **아이템 4종 3D 렌더링 (이끼, 다육이, 버섯, 자갈)**
-- [ ] 코인 카운터 표시 (10초마다 +1)
-- [ ] 상점 열기/닫기 가능
-- [ ] **아이템 카드에 감정 기능 표시**
+- [ ] 채팅 입력 → 또봇 AI 응답 (JSON) → 애니메이션 동작
+- [ ] 10개 워크플로우 중 5개+ 동작
+- [ ] 코인 자동 적립 (1분/1코인)
+- [ ] 상점 열기 → 아이템 구매 가능
+- [ ] 구매 후 "~해줘" 요청 → 적용
+- [ ] 음성 → 편지 대기 → 도착
 
-**Commit Message**: `feat: implement 3D terrarium and emotional shop`
-
----
-
-### Phase 3: AI 챗봇 + 정령 시스템 (12:40 ~ 14:00) — 1시간 20분
-
-**담당**: AI-1 (챗봇) + AI-2 (콘텐츠) + FE-2 (정령 UI)
-
-| Task | 담당 | Parallel Agent | 우선순위 |
-|------|------|----------------|----------|
-| **lib/openai.ts (클라이언트)** | AI-1 | Agent 1 | P0 |
-| **hooks/useChat.ts (스트리밍)** | AI-1 | Agent 1 | P0 |
-| **ChatBottomSheet.tsx** | AI-1 | Agent 2 | P0 |
-| **ChatMessage.tsx** | AI-1 | Agent 2 | P0 |
-| **ChatInput.tsx** | AI-1 | Agent 2 | P0 |
-| **lib/prompts.ts (힐링 룰)** | AI-2 | Agent 3 | P0 |
-| **lib/questions.ts (20개)** | AI-2 | Agent 3 | P0 |
-| **lib/spiritResponses.ts (멘트 풀)** | AI-2 | Agent 3 | P0 |
-| **SpiritStatus.tsx (3단계)** | FE-2 | Agent 4 | P0 |
-| **SpiritGreeting.tsx** | FE-2 | Agent 4 | P0 |
-| **useSpiritState.ts** | FE-2 | Agent 4 | P0 |
-
-**Parallel Agent 전략 (4x 병렬)**:
-```
-Agent 1 (AI-1): "lib/openai.ts와 hooks/useChat.ts를 만들어줘.
-          OpenAI GPT-4o-mini, 스트리밍 응답, max_tokens: 150, temperature: 0.8"
-
-Agent 2 (AI-1): "components/Chat/ 폴더에 ChatBottomSheet, ChatMessage, ChatInput을 만들어줘.
-          사용자 메시지 오른쪽 초록색, 정령 메시지 왼쪽 회색, 타이핑 인디케이터"
-
-Agent 3 (AI-2): "lib/ 폴더에 prompts.ts, questions.ts, spiritResponses.ts를 만들어줘.
-          PRD에 정의된 프롬프트(조언 금지, 부담 금지), 질문 20개, 상태별 인사, 구매 반응 멘트"
-
-Agent 4 (FE-2): "components/Spirit/ 폴더에 SpiritStatus.tsx, SpiritGreeting.tsx를 만들어줘.
-          상태 3단계 (고요/살짝 지침/반짝임), glow 효과, 말풍선 UI.
-          hooks/useSpiritState.ts로 상태 계산 로직"
-```
-
-**점심 + 머지 (13:00 ~ 13:30)**:
-```
-□ 전원 feature 브랜치 → main 머지
-□ Expo Go에서 빌드 확인
-□ 3D 씬 + 상점 + 챗봇 통합 테스트
-□ 정령 상태 표시 확인
-□ AI 응답 스트리밍 확인
-```
-
-**Completion Criteria**:
-- [ ] **AI 챗봇 대화 가능 (스트리밍)**
-- [ ] **오늘의 질문 랜덤 표시**
-- [ ] **정령 상태 3단계 UI 표시**
-- [ ] **상태별 인사 멘트 동작**
-- [ ] **구매 시 정령 반응 멘트**
-
-**Commit Message**: `feat: implement AI chatbot and spirit state system`
+**Commit**: `feat: robot AI + coin economy + letter system`
 
 ---
 
-### Phase 4: 감정 루틴 시스템 (14:00 ~ 15:00) — 1시간
+### Phase 4: 통합 + 감정 시스템 (3:30 ~ 4:30) — 1시간
 
-**담당**: FE-2 (주도) + 전원 지원
+**담당**: 전원
 
 | Task | 담당 | 우선순위 |
 |------|------|----------|
-| **EndSessionButton.tsx ("오늘은 여기까지")** | FE-2 | P0 |
-| **DiaryModal.tsx (1줄 일기 입력)** | FE-2 | P0 |
-| **DiarySuggestions.tsx (2개 후보)** | FE-2 | P0 |
-| **useDiarySuggestions.ts** | FE-2 | P0 |
-| **정령 마무리 멘트** | AI-2 | P0 |
-| 아이템 구매 → 정령 반응 연결 | FE-2 | P0 |
-| 정령 상태 변화 로직 완성 | FE-2 | P0 |
-| 코인 추가 애니메이션 (Reanimated) | FE-1 | P1 |
-| 아이템 적용 애니메이션 | FE-1 | P1 |
-| 햅틱 피드백 | FE-2 | P1 |
+| 전체 플로우 통합 테스트 | 전원 | P0 |
+| 감정 변화 → 3D 표현 연결 | FE-2 | P0 |
+| 워크플로우 → 감정 변화 연결 | AI-1 | P0 |
+| 편지 도착 → 우편함 알림 | AI-1 | P0 |
+| 에러 폴백 확인 (API 실패, 3D 실패) | 전원 | P0 |
+| 아이템 장착 시각화 (모자 등) | FE-2 | P1 |
+| 코인 적립 애니메이션 | FE-2 | P1 |
+| 햅틱 피드백 | FE-1 | P1 |
 
 **Completion Criteria**:
-- [ ] **"오늘은 여기까지" 버튼 동작**
-- [ ] **마무리 멘트 표시**
-- [ ] **1줄 일기 후보 2개 표시**
-- [ ] **일기 저장 후 앱 종료 플로우**
-- [ ] 구매 시 정령 반응
-- [ ] 코인 bounce 애니메이션 (P1)
+- [ ] 명령→수행→감정변화 전체 사이클 동작
+- [ ] 편지 시스템 전체 플로우 동작
+- [ ] 구매→적용 전체 플로우 동작
+- [ ] 에러 시 앱 크래시 없음
 
-**Commit Message**: `feat: implement emotional routine system (diary + end session)`
+**Commit**: `feat: integrate emotion system + letter delivery`
 
 ---
 
-### Phase 5: 마무리 + 데모 준비 (15:00 ~ 15:30) — 30분
+### Phase 5: 폴리싱 + 데모 준비 (4:30 ~ 5:00) — 30분
 
 **담당**: 전원
 
 | Task | 담당 | 시간 |
 |------|------|------|
-| 전체 플로우 테스트 | AI-2 | 10분 |
+| 전체 플로우 최종 테스트 | AI-2 | 10분 |
 | 크리티컬 버그 수정 | FE-2 | 10분 |
-| 데모 시나리오 3개 확인 | AI-2 | 10분 |
-| EAS Build (Development Build) | FE-2 | 병렬 |
+| 데모 3개 시나리오 리허설 | 전원 | 10분 |
 
 **데모 시나리오 체크리스트**:
-- [ ] Scenario 1: 첫 만남 + 테라리움 감상 (1분)
-  - 앱 실행 → 3D 로드 → 초록이 인사 → 정령 상태 (고요) → 코인 +1
-- [ ] Scenario 2: 정령과 대화 (1분 30초)
-  - 💬 대화 버튼 → 오늘의 질문 → "힘들었어" 입력 → 공감 응답 (조언 없이!)
-- [ ] Scenario 3: 꾸미기 + 마무리 (1분)
-  - 🛒 상점 → 버섯 구매 → 초록이 반응 → "오늘은 여기까지" → 1줄 일기 저장
+- [ ] Scenario 1: 첫 만남 + 명령 (1분 30초)
+  - 앱 실행 → 3D 로드 → 또봇 인사 → "돌돌이 닦아줘" → 또봇 수행 → 돌돌이 happy
+- [ ] Scenario 2: 상점 + 꾸미기 (1분)
+  - 코인 확인 → 상점 → "작은 꽃" 구매 → "꽃 심어줘" → 또봇 수행 → 돌돌이 excited
+- [ ] Scenario 3: 음성 편지 (1분)
+  - 🎤 → "돌돌이야 오늘 좀 힘들었어" → 돌돌이 반응 → (10초) → 편지 도착 → 읽기
 
-**최종 체크리스트**:
-- [ ] Expo Go에서 정상 동작
-- [ ] 데모 3개 시나리오 100% 성공
-- [ ] AI 응답: 조언 없음, 부담 주는 말 없음
-- [ ] 정령 상태 변화 확인
-- [ ] AsyncStorage 저장/로드 확인
+**5:30~6:00 시연**:
+- [ ] 빌드 + 발표 준비
+- [ ] 앱 크래시 없음
+- [ ] 모든 폴백 정상 동작
 
-**Commit Message**: `feat: finalize for hackathon demo`
+**Commit**: `feat: finalize for hackathon demo`
 
 ---
 
 ## P0/P1/P2 Feature Matrix
 
-### P0 - 해커톤 필수 (5시간 내)
+### P0 - 해커톤 필수
 
 | Feature | 감정적 가치 | Phase |
 |---------|------------|-------|
-| 3D 테라리움 + 아이템 4종 | 나만의 작은 세계 | 2 |
-| AI 챗봇 (스트리밍) | 누군가 내 편 | 3 |
-| 정령 상태 3단계 | "돌봐서 변했다" | 3 |
-| 감정 기능 아이템 | 꾸미기 = 힐링 | 2 |
-| "오늘은 여기까지" 버튼 | 부담 없음 | 4 |
-| 1줄 일기 | 부담 없는 기록 | 4 |
+| 3D 테라리움 씬 (또봇 + 돌돌이 + 배경) | 나만의 세계 | 2 |
+| 채팅 인터페이스 (텍스트 입력) | 명령의 재미 | 2 |
+| 10개 워크플로우 (AI 명령 해석) | 다양한 상호작용 | 3 |
+| 코인 자동 적립 + 상점 | 기다림의 즐거움 | 3 |
+| 아이템 구매 → 적용 루프 | 꾸미기 재미 | 3 |
+| 돌돌이 5가지 감정 | 돌봄의 보람 | 2,4 |
+| 음성 입력 (Whisper STT) | 음성 소통 | 2 |
+| 편지 시스템 (LLM 생성) | 느린 소통의 따뜻함 | 3 |
 
 ### P1 - 시간 남으면
 
 | Feature | Phase |
 |---------|-------|
-| 오늘의 질문 (대화 시작) | 3 |
-| 코인/구매 애니메이션 | 4 |
+| 아이템 착용 시각화 (모자/안경) | 4 |
+| 우편함 인터랙션 UI | 4 |
+| 감정 파티클 효과 | 4 |
+| 코인 적립 애니메이션 | 4 |
 | 햅틱 피드백 | 4 |
-| 2D 폴백 | 2 |
 
 ### P2 - 해커톤 이후
 
 | Feature |
 |---------|
-| 포토카드 공유 |
+| 멀티플레이어 |
+| 배경음악/사운드 효과 |
+| 클라우드 저장 |
+| 시간대/계절 배경 변화 |
 | 랜덤 미니 이벤트 (비/바람) |
-| "좋은 말 보관함" |
-| 시간대/계절 배경 |
-| Crystal, FairyLight 아이템 |
 
 ---
 
@@ -290,10 +261,10 @@ Agent 4 (FE-2): "components/Spirit/ 폴더에 SpiritStatus.tsx, SpiritGreeting.t
 
 | Metric | Value |
 |--------|-------|
-| Total Tasks | 0/45 |
+| Total Tasks | 0/42 |
 | Current Phase | - |
 | Status | pending |
-| Last Updated | 2026-02-02 |
+| Last Updated | 2026-02-05 |
 
 ---
 
@@ -307,49 +278,48 @@ Agent 4 (FE-2): "components/Spirit/ 폴더에 SpiritStatus.tsx, SpiritGreeting.t
 
 ## Fallback Plan
 
-### 14:00 기준 판단
+### 3:30 기준 판단
 
 | 상황 | 대응 |
 |------|------|
 | 3D 씬 미완성 | 2D 이미지 + 이모지 오버레이 |
-| AI 챗봇 미완성 | 하드코딩 인사 + 반응 멘트만 |
-| 정령 상태 미완성 | 고정 "고요" 상태 |
-| 일기 미완성 | 스킵, 마무리 멘트만 |
+| AI 명령 해석 미완성 | 하드코딩 5개 워크플로우 (키워드 매칭) |
+| 편지 생성 미완성 | LETTER_FALLBACK_RESPONSES 사용 |
+| 코인/상점 미완성 | 초기 코인 100개 + 구매 하드코딩 |
+| 워크플로우 10개 미완성 | 최소 5개로 데모 |
 
 ### 최소 데모 (Emergency)
 
-1. 테라리움 화면 (2D/3D) + 코인 자동 수집
-2. 버섯 1개 구매 → 정령 반응 (하드코딩)
-3. 💬 대화 1회 (하드코딩 응답 OK)
+1. 테라리움 화면 (2D/3D) + 돌돌이 + 또봇
+2. "닦아줘" 입력 → 또봇 Walking → 돌돌이 happy
+3. 🎤 → 편지 도착 (폴백)
 
 ---
 
 ## Notes for Cursor Agents
 
 ```
-프로젝트: Healing Terrarium - 감정 루틴 힐링 앱
-컨셉: "30초면 충분해" + "초록이가 내 편" + "내가 돌봐서 변했다"
+프로젝트: Stone Buddy - 힐링 게임 (테라리움 돌 키우기)
+컨셉: 로봇에게 명령 + 코인 경제 + 음성 편지
 
 핵심 기술:
-- React Native + Expo (SDK 52)
-- expo-three + expo-gl (3D)
-- OpenAI GPT-4o-mini (스트리밍)
-- NativeWind v4 (스타일링)
-- Zustand + AsyncStorage (상태)
+- Expo SDK 54 + react-native-webview (하이브리드)
+- Vite 7 + React 19 + @react-three/fiber 9 (3D 씬)
+- OpenAI GPT-4o-mini (명령 해석, 편지) + Whisper (STT)
+- Zustand + AsyncStorage (게임 상태)
 
-정령 "초록이" 룰:
-- 조언 먼저 제시 금지
-- "매일 해봐", "꾸준히" 같은 부담 주는 말 금지
-- 50자 이내 짧은 응답
-- 공감 + 질문 중심
+10개 워크플로우:
+1. 돌 닦기 (clean) 2. 잡초 뽑기 (weed)
+3. 물주기 (water) 4. 꽃 심기 (plant_flower)
+5. 바닥 쓸기 (sweep) 6. 상태 확인 (check_status)
+7. 꾸미기 (decorate) 8. 아이템 장착 (equip_item)
+9. 춤추기 (dance) 10. 인사하기 (wave)
 
-감정 기능 아이템:
-- 이끼: "말을 줄이고 싶은 날"
-- 자갈: "정리하고 싶은 날"
-- 버섯: "기운이 필요할 때"
-- 다육이: "괜찮다고 확인받고 싶을 때"
+코인: 1분/1코인, 아이템 13종 (환경 6 + 도구 2 + 장식 5)
+편지: 음성→대기(10초)→우편함 도착, LLM 생성
+감정: calm/happy/sad/excited/sleepy
 
-PRD: docs/prd/PRD_stone-garden.md (v5.0)
+PRD: docs/prd/PRD_stone-garden.md (v6.0)
 ```
 
 ---
@@ -358,13 +328,10 @@ PRD: docs/prd/PRD_stone-garden.md (v5.0)
 
 ```json
 {
-  "runtime": "React Native 0.76.x + Expo SDK 52",
-  "navigation": "Expo Router ~4.0.0",
-  "3d": "expo-gl ~15.0.0 + expo-three ^8.0.0 + three ^0.160.0",
-  "ai": "openai ^4.28.0 (GPT-4o-mini, streaming)",
-  "styling": "nativewind ^4.0.0",
-  "state": "zustand ^5.0.0 + @react-native-async-storage/async-storage ^2.0.0",
-  "animation": "react-native-reanimated ^3.16.0",
-  "ui": "@gorhom/bottom-sheet ^5.0.0"
+  "app": "Expo SDK 54 + react-native-webview + expo-audio",
+  "web": "Vite 7 + React 19 + @react-three/fiber 9 + @react-three/drei 10",
+  "ai": "OpenAI GPT-4o-mini (chat/letter) + Whisper (STT)",
+  "state": "zustand + @react-native-async-storage/async-storage",
+  "type": "TypeScript strict mode"
 }
 ```

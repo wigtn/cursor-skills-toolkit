@@ -1,0 +1,267 @@
+---
+description: 커밋 전 코드 리뷰 프로세스 - 모든 커밋 요청 시 적용
+globs: "**/*"
+alwaysApply: true
+---
+
+# 커밋 전 코드 리뷰 규칙
+
+> **중요**: 사용자가 "커밋해줘", "commit", "변경사항 저장", "푸시해줘" 등을 요청하면
+> 이 규칙을 반드시 따라야 합니다.
+
+## 커밋 프로세스 (4단계)
+
+```
+[요청] → [1. 변경 분석] → [2. 품질 검사] → [3. 사용자 확인] → [4. 커밋]
+```
+
+---
+
+## Step 1: 변경사항 분석
+
+```bash
+# 1-1. 최신 상태 동기화
+git pull
+
+# 1-2. 변경 파일 확인
+git status
+
+# 1-3. 변경 통계
+git diff --stat HEAD
+
+# 1-4. 상세 diff (필요시)
+git diff <file>
+```
+
+**체크포인트:**
+- [ ] 변경된 파일이 내 담당 영역인가?
+- [ ] shared/ 변경이 있다면 팀 합의가 있었는가?
+- [ ] .env, API 키 등 민감한 파일이 포함되어 있지 않은가?
+
+---
+
+## Step 2: 품질 검사 (Quality Gate)
+
+### 2-1. 체크리스트 평가
+
+각 항목을 0-20점으로 평가:
+
+**Readability (가독성)**
+- [ ] 변수/함수명이 의도를 명확히 표현하는가?
+- [ ] 함수 길이가 적절한가? (20줄 이하 권장)
+- [ ] 중첩 깊이가 적절한가? (3단계 이하)
+- [ ] 일관된 포맷팅이 적용되었는가?
+
+**Maintainability (유지보수성)**
+- [ ] 단일 책임 원칙을 준수하는가?
+- [ ] 하드코딩된 값이 없는가? (상수 사용)
+- [ ] shared/의 타입/상수를 import해서 사용하는가?
+
+**Performance (성능)**
+- [ ] 불필요한 루프/연산이 없는가?
+- [ ] 메모리 누수 가능성이 없는가?
+- [ ] 비동기 처리가 적절한가?
+
+**Best Practices (모범 사례)**
+- [ ] TypeScript any 타입을 사용하지 않았는가?
+- [ ] 에러 처리가 적절한가?
+- [ ] console.log가 __DEV__ 분기 안에 있는가?
+
+### 2-2. 점수 계산
+
+| Grade | 점수 | 액션 |
+|-------|------|------|
+| A (80+) | 80-100 | ✅ 커밋 진행 |
+| B (70-79) | 70-79 | ⚠️ 개선 후 커밋 |
+| C (60-69) | 60-69 | ⚠️ 수정 필요, 사용자 확인 |
+| F (<60) | 0-59 | ❌ 커밋 중단, 수정 필수 |
+
+### 2-3. 점수 보고 형식
+
+```markdown
+## Quality Gate Result
+
+| 항목 | 점수 | 상태 |
+|------|------|------|
+| Readability | XX/20 | ✅/⚠️/❌ |
+| Maintainability | XX/20 | ✅/⚠️/❌ |
+| Performance | XX/20 | ✅/⚠️/❌ |
+| Best Practices | XX/20 | ✅/⚠️/❌ |
+| **Total** | **XX/100** | **PASS/FAIL** |
+
+### 발견된 이슈
+- [Critical/Major/Minor] 파일:라인 - 설명
+```
+
+---
+
+## Step 3: 사용자 확인 (Safety Guard)
+
+**반드시 커밋 전에 사용자에게 확인 받아야 함!**
+
+다음 내용을 보여주고 확인 요청:
+
+```
+📊 변경 요약:
+• 파일: X개 변경 (+추가, -삭제)
+• 품질 점수: XX/100 (Grade)
+
+📋 변경 파일:
+• file1.ts (new/modified)
+• file2.ts (modified)
+
+⚠️ 주의사항 (있다면):
+• shared/ 파일 변경됨 - 다른 팀원 영향 있음
+• 새 의존성 추가됨
+
+커밋을 진행할까요? (예/아니오)
+```
+
+---
+
+## Step 4: 커밋 실행
+
+### 4-1. 커밋 타입 결정
+
+| 변경 패턴 | 타입 |
+|----------|------|
+| 새 기능 | `feat` |
+| 버그 수정 | `fix` |
+| 문서 | `docs` |
+| 리팩토링 | `refactor` |
+| 스타일/포맷 | `style` |
+| 테스트 | `test` |
+| 설정/빌드 | `chore` |
+
+### 4-2. 커밋 메시지 형식
+
+```
+<type>(<scope>): <subject>
+
+<body - 변경 내용 설명>
+
+Quality Score: XX/100
+Co-Authored-By: Claude <noreply@anthropic.com>
+```
+
+**scope 규칙:**
+- FE-1: `app`
+- FE-2: `web`, `components`
+- AI-1: `chat`, `state`
+- AI-2: `types`, `docs`
+
+### 4-3. 커밋 명령
+
+```bash
+# 파일 스테이징 (개별 파일 권장)
+git add <specific-files>
+
+# 커밋 (HEREDOC 사용)
+git commit -m "$(cat <<'EOF'
+<type>(<scope>): <subject>
+
+<body>
+
+Quality Score: XX/100
+Co-Authored-By: Claude <noreply@anthropic.com>
+EOF
+)"
+
+# 푸시 (사용자 요청 시에만)
+git push origin <branch>
+```
+
+---
+
+## 금지 사항
+
+### 절대 하지 말 것
+- ❌ 품질 검사 없이 바로 커밋
+- ❌ 사용자 확인 없이 커밋
+- ❌ `git add -A` 또는 `git add .` 사용 (민감 파일 포함 위험)
+- ❌ `--no-verify` 플래그 사용
+- ❌ `--force` 푸시
+- ❌ main/master에 직접 푸시 (브랜치 사용)
+
+### 민감 파일 체크
+커밋 전 다음 파일이 포함되어 있으면 **즉시 중단**:
+- `.env`, `.env.local`, `.env.*`
+- `*.key`, `*.pem`
+- `credentials.*`, `secrets.*`
+- API 키가 하드코딩된 파일
+
+---
+
+## 예시: 전체 프로세스
+
+```
+사용자: "변경사항 커밋해줘"
+
+AI 응답:
+
+1️⃣ 변경사항 분석 중...
+
+📊 변경 통계:
+• 3 files changed (+45, -12)
+
+📋 변경 파일:
+• web/src/components/Robot.tsx (modified)
+• web/src/App.css (modified)
+• shared/types.ts (modified) ⚠️ shared 변경
+
+2️⃣ 품질 검사 중...
+
+## Quality Gate Result
+
+| 항목 | 점수 | 상태 |
+|------|------|------|
+| Readability | 18/20 | ✅ |
+| Maintainability | 17/20 | ✅ |
+| Performance | 16/20 | ✅ |
+| Best Practices | 18/20 | ✅ |
+| **Total** | **85/100** | **✅ PASS** |
+
+### 발견된 이슈
+- [Minor] Robot.tsx:45 - 변수명 `d` → `duration` 권장
+
+3️⃣ 확인 요청
+
+⚠️ shared/types.ts가 변경되었습니다.
+다른 팀원(FE-1, AI-1)에게 영향이 있을 수 있습니다.
+
+커밋을 진행할까요?
+- 예: 커밋 진행
+- 아니오: 취소
+
+사용자: "예"
+
+4️⃣ 커밋 실행
+
+✅ Committed: abc1234
+   feat(components): Update Robot animation transition
+
+✅ Quality Score: 85/100
+
+푸시도 진행할까요? (예/아니오)
+```
+
+---
+
+## 빠른 참조
+
+```
+커밋 요청 → 분석 → 품질검사 → 확인 → 커밋
+
+점수 기준:
+• 80+ = 바로 커밋 가능
+• 70-79 = 개선 권장
+• 60-69 = 수정 필요
+• <60 = 커밋 중단
+
+커밋 전 필수 확인:
+• [ ] 담당 영역 파일만 변경?
+• [ ] shared 변경 시 팀 합의?
+• [ ] 민감 파일 제외?
+• [ ] 품질 점수 80+?
+• [ ] 사용자 확인 완료?
+```

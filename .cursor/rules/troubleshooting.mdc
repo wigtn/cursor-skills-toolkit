@@ -1,117 +1,257 @@
 ---
-description: "에러 대응 및 트러블슈팅 가이드 - Cursor가 항상 참조"
+description: 에러 대응·트러블슈팅 가이드 — 자주 발생하는 문제와 해결법
 globs: "**/*"
 alwaysApply: true
 ---
 
-# Troubleshooting Guide
+# 트러블슈팅 가이드
 
-## 빠른 에러 대응 체크리스트
+> Cursor AI가 에러를 만나면 이 가이드를 참조하여 해결합니다.
+> 새 에러 해결 시 `.cursor/knowledge/error-solutions.md`에 기록하세요.
 
-### 1. Expo/React Native 일반
-| 증상 | 원인 | 해결 |
-|------|------|------|
-| Metro bundler 멈춤 | 캐시 문제 | `npx expo start -c` |
-| 앱 크래시 | 패키지 충돌 | `rm -rf node_modules && npm install` |
-| 화면 빈 화면 | 렌더링 에러 | 콘솔 에러 확인 후 해당 컴포넌트 수정 |
-| TypeScript 에러 | 타입 불일치 | `types/` 폴더 확인 |
+## 1. Expo / React Native
 
-### 2. expo-three / 3D 관련
-| 증상 | 원인 | 해결 |
-|------|------|------|
-| GL 컨텍스트 생성 실패 | 디바이스 미지원 | 2D Fallback 사용 |
-| 검은 화면 | `gl.endFrameEXP()` 누락 | animate 함수에 추가 |
-| 메모리 초과 | 폴리곤 과다 | segment 16-32로 제한 |
-| 텍스처 안 보임 | 비동기 로딩 | TextureLoader 콜백 확인 |
+### Metro 캐시 문제
+- **증상**: 이전 코드가 반영되지 않음, 이상한 에러
+- **해결**: `npx expo start --clear` 또는 `rm -rf node_modules/.cache`
 
-### 3. OpenAI API 관련
-| 증상 | 원인 | 해결 |
-|------|------|------|
-| 401 Unauthorized | API 키 오류 | `.env` 파일 확인 |
-| 429 Rate Limit | 요청 과다 | 재시도 로직 + 폴백 메시지 |
-| 스트리밍 중단 | 네트워크 끊김 | try-catch + 에러 메시지 |
-| 응답 너무 김 | max_tokens 미설정 | max_tokens: 150 설정 |
-| Response body is null | Expo/RN fetch 미지원 | 비스트리밍(stream: false) 사용 |
+### 앱 크래시 (시작 시)
+- **증상**: 앱이 열리자마자 종료
+- **해결**:
+  1. `npx expo start --clear`
+  2. `rm -rf node_modules && npm install`
+  3. app.json의 `newArchEnabled` 확인
 
-### 4. NativeWind / 스타일링
-| 증상 | 원인 | 해결 |
-|------|------|------|
-| 스타일 미적용 | tailwind.config 누락 | content 경로 확인 |
-| className 에러 | babel 설정 누락 | `nativewind/babel` 플러그인 확인 |
+### 빈 화면
+- **증상**: 앱은 실행되지만 아무것도 안 보임
+- **해결**:
+  1. WebView의 `source.uri` URL 확인 (IP 맞는지)
+  2. 웹 dev 서버가 실행 중인지 확인 (`curl http://localhost:5173`)
+  3. `originWhitelist={['*']}` 설정 확인
 
-### 5. 상태관리 (Zustand)
-| 증상 | 원인 | 해결 |
-|------|------|------|
-| 상태 초기화됨 | 앱 재시작 | AsyncStorage persist 설정 |
-| 상태 업데이트 안됨 | 불변성 위반 | spread 연산자로 새 객체 생성 |
+### WebView 로드 실패
+- **증상**: WebView 영역이 비어있거나 에러 표시
+- **원인**: 로컬 IP 불일치 (iOS), CORS, 네트워크
+- **해결**:
+  1. `ifconfig | grep inet` 으로 실제 IP 확인
+  2. WEB_URL 상수의 IP 업데이트
+  3. Vite config에 `server: { host: '0.0.0.0' }` 추가
 
-## 긴급 폴백 전략
+### TypeScript 에러
+- **해결**: `npx tsc --noEmit`으로 확인 후 하나씩 수정
+- **strict 관련**: `tsconfig.json`에 `strict: true` 유지, `any` 대신 `unknown`
 
-### 3D 렌더링 실패 시
+## 2. React Three Fiber / Three.js
+
+### GLB 모델 로드 실패
+- **증상**: 3D 씬에 모델이 안 보임
+- **해결**:
+  1. `public/models/` 에 파일 존재 확인
+  2. 경로: `/models/RobotExpressive.glb` (앞에 `/` 필수)
+  3. `useGLTF.preload()` 추가
+  4. Vite가 실행 중인지 확인
+
+### SkeletonUtils 에러
+- **증상**: 모델 복제 시 에러
+- **import**: `import * as SkeletonUtils from 'three/examples/jsm/utils/SkeletonUtils.js'`
+- **사용**: `useMemo(() => SkeletonUtils.clone(scene), [scene])` 필수
+
+### 애니메이션 전환 안됨
+- **증상**: 버튼 눌러도 애니메이션 변경 없음
+- **해결**:
+  1. `useAnimations(animations, group)` — group ref 연결 확인
+  2. animation 이름이 GLB 안의 실제 이름과 일치하는지 확인
+  3. fadeOut → reset → fadeIn → play 순서 확인
+
+### 검은 화면 (expo-three 사용 시)
+- **원인**: `gl.endFrameEXP()` 누락
+- **해결**: animate 루프 마지막에 반드시 `gl.endFrameEXP()` 호출
+- **참고**: R3F 사용 시에는 이 문제 없음 (R3F가 렌더 루프 관리)
+
+### 성능 저하 (모바일)
+- **해결**:
+  1. `antialias: false` (Canvas prop)
+  2. 그림자 최소화 (`castShadow`는 directionalLight 하나만)
+  3. OrbitControls `minDistance`/`maxDistance` 설정
+  4. GLB 모델 최적화 (gltf-transform 등으로 압축)
+  5. `pixelRatio` 제한: `Math.min(window.devicePixelRatio, 2)`
+
+## 3. OpenAI API
+
+### 401 Unauthorized
+- **원인**: API 키 누락 또는 만료
+- **해결**:
+  1. `.env`에 `EXPO_PUBLIC_OPENAI_API_KEY` 설정
+  2. API 키 유효성 확인 (OpenAI 대시보드)
+  3. **폴백**: 더미 문장으로 대체 (앱이 멈추면 안 됨)
+
+### 429 Rate Limit
+- **해결**: 재시도 로직 + exponential backoff
+- **해커톤 팁**: rate limit 걸리면 더미 응답으로 전환하고 계속 개발
+
+### Response body null
+- **원인**: 스트리밍 모드에서 응답 파싱 실패
+- **해결**: **비스트리밍 모드 권장** (`stream: false` 또는 생략)
+- 해커톤에서는 스트리밍 구현에 시간 쓰지 말 것
+
+### Whisper STT 실패
+- **증상**: transcribeAudio에서 에러
+- **해결**:
+  1. 오디오 파일 형식 확인 (`audio/m4a`)
+  2. 파일 크기 확인 (25MB 제한)
+  3. 네트워크 연결 확인
+  4. **폴백**: DUMMY_STT_SENTENCES 사용
+
+## 4. WebView ↔ Native 통신
+
+### postMessage 수신 안됨
+- **증상**: injectJavaScript 실행했지만 웹에서 못 받음
+- **해결**:
+  1. `window.addEventListener('message', handler)` 설정 확인
+  2. `JSON.stringify` 올바르게 감쌌는지 확인
+  3. injectJavaScript 끝에 `true;` 붙었는지 확인
+  4. WebView `javaScriptEnabled={true}` 확인
+
+### onMessage 수신 안됨
+- **증상**: 웹에서 postMessage 보냈지만 네이티브에서 못 받음
+- **해결**:
+  1. `window.ReactNativeWebView?.postMessage()` 사용 확인
+  2. WebView `onMessage` prop 연결 확인
+  3. `event.nativeEvent.data`로 접근
+
+## 5. 긴급 폴백
+
+### 3D 폴백 (GL 컨텍스트 실패 시)
 ```typescript
-// components/Terrarium/TerrariumScene.tsx
-const [glSupported, setGlSupported] = useState(true);
+// 3D가 안 되면 2D 이미지로 대체
+const [glFailed, setGlFailed] = useState(false);
+if (glFailed) return <Image source={require('./assets/terrarium-2d.png')} />;
+```
 
-if (!glSupported) {
-  return <Terrarium2DFallback items={items} />;
+### AI 폴백 (API 키 없거나 에러 시)
+```typescript
+// ⚠️ shared/constants.ts의 SPIRIT_FALLBACK_RESPONSES를 사용하세요!
+import { SPIRIT_FALLBACK_RESPONSES } from '../shared/constants';
+// API 에러 시 랜덤 선택하여 반환
+const fallback = SPIRIT_FALLBACK_RESPONSES[Math.floor(Math.random() * SPIRIT_FALLBACK_RESPONSES.length)];
+```
+
+### 네트워크 폴백 (오프라인 시)
+```typescript
+// 네트워크 상태 감지
+import NetInfo from '@react-native-community/netinfo';
+
+const [isOffline, setIsOffline] = useState(false);
+useEffect(() => {
+  const unsubscribe = NetInfo.addEventListener(state => {
+    setIsOffline(!state.isConnected);
+  });
+  return () => unsubscribe();
+}, []);
+
+// 오프라인 시 폴백 UI
+if (isOffline) {
+  return <OfflineBanner message="인터넷 연결을 확인해주세요" />;
 }
 ```
 
-### AI 응답 실패 시
-```typescript
-// 하드코딩 폴백 응답
-const FALLBACK_RESPONSES = [
-  "오늘도 수고했어 🌱",
-  "괜찮아, 쉬어도 돼 🌿",
-  "네 마음 알아 ✨",
-];
-```
+### 전체 폴백 원칙
+> **해커톤에서 앱이 크래시나면 안 된다.**
+> 어떤 에러든 catch하고, 사용자에게는 정상처럼 보이게.
+> 완벽한 기능보다 안정적인 데모가 중요.
 
-### 환경변수 누락 시
+## 6. Rate Limiting 대응
+
+### API 호출 제한
 ```typescript
-const apiKey = process.env.EXPO_PUBLIC_OPENAI_API_KEY;
-if (!apiKey) {
-  console.warn('API key missing, using fallback mode');
-  return useFallbackResponses();
+// shared/constants.ts의 RATE_LIMIT 사용
+import { RATE_LIMIT } from '../shared/constants';
+
+let lastApiCall = 0;
+
+async function callApiWithRateLimit() {
+  const now = Date.now();
+  const elapsed = now - lastApiCall;
+
+  if (elapsed < RATE_LIMIT.MIN_REQUEST_INTERVAL_MS) {
+    await new Promise(r => setTimeout(r, RATE_LIMIT.MIN_REQUEST_INTERVAL_MS - elapsed));
+  }
+
+  lastApiCall = Date.now();
+  // ... API 호출
 }
 ```
 
-## 에러 로깅 규칙
+### 429 에러 처리 (Rate Limit 초과)
+```typescript
+async function fetchWithRetry(url: string, options: RequestInit, retries = 3) {
+  for (let i = 0; i < retries; i++) {
+    try {
+      const response = await fetch(url, options);
+      if (response.status === 429) {
+        const waitTime = Math.pow(2, i) * 1000; // 1s, 2s, 4s
+        await new Promise(r => setTimeout(r, waitTime));
+        continue;
+      }
+      return response;
+    } catch (error) {
+      if (i === retries - 1) throw error;
+    }
+  }
+}
+```
 
-에러 발생 시 반드시 기록:
-1. **파일**: `.cursor/knowledge/error-solutions.md`
-2. **형식**:
+## 7. 메시지 동기화 문제
+
+### Race Condition 방지
+```typescript
+// shared/message-protocol.ts의 AppMessageState 사용
+import { AppMessageState, MESSAGE_STATE_TRANSITIONS } from '../shared/message-protocol';
+
+const [messageState, setMessageState] = useState<AppMessageState>('IDLE');
+
+function canTransitionTo(nextState: AppMessageState): boolean {
+  return MESSAGE_STATE_TRANSITIONS[messageState].includes(nextState);
+}
+
+function handleRecordingStart() {
+  if (!canTransitionTo('RECORDING')) {
+    console.warn('Cannot start recording in current state:', messageState);
+    return;
+  }
+  setMessageState('RECORDING');
+  // ... 녹음 시작
+}
+```
+
+### 메시지 디바운싱
+```typescript
+// 녹음 버튼 더블클릭 방지
+const [isProcessing, setIsProcessing] = useState(false);
+
+const handleRecordButton = useCallback(async () => {
+  if (isProcessing) return;
+  setIsProcessing(true);
+
+  try {
+    // ... 녹음 로직
+  } finally {
+    setTimeout(() => setIsProcessing(false), 500);
+  }
+}, [isProcessing]);
+```
+
+## 8. 에러 로깅 형식
+
+에러 발생 시 `.cursor/knowledge/error-solutions.md`에 기록:
+
 ```markdown
-### [날짜] 에러 제목
-- **증상**: 무슨 일이 발생했는지
-- **원인**: 왜 발생했는지
-- **해결**: 어떻게 해결했는지
-- **파일**: 관련 파일 경로
+## [에러 제목]
+- **날짜**: 2026-02-XX
+- **상태**: 해결됨
+- **증상**: [정확한 에러 메시지]
+- **원인**: [왜 발생했는지]
+- **해결**: [어떻게 해결했는지]
+- **관련 파일**: [수정한 파일]
+- **참고**: [추가 정보]
 ```
-
-## Phase별 예상 에러
-
-### Phase 1 (환경 설정)
-- 패키지 버전 충돌 → package.json 버전 고정
-- peer dependency 경고 → `--legacy-peer-deps` 옵션
-
-### Phase 2 (3D + 상점)
-- GLView 렌더링 실패 → 2D 폴백 준비
-- 타입 에러 → FE-2가 types/ 먼저 확정
-
-### Phase 3 (AI 챗봇)
-- API 키 에러 → 팀 공유 확인
-- 스트리밍 실패 → 비스트리밍(stream: false)으로 통일
-
-### Phase 4 (감정 루틴)
-- 애니메이션 버벅임 → 60fps 유지 확인
-- AsyncStorage 에러 → 데이터 형식 확인
-
-### Phase 5 (QA)
-- 15:00 이후 새 기능 금지
-- 크리티컬 버그만 수정
-
-## 참조 파일
-
-- 에러 해결 기록: `.cursor/knowledge/error-solutions.md`
-- AI-1 작업 가이드: `.cursor/commands/ai1-all-tasks.md` (에러 없이 구현하기 섹션)

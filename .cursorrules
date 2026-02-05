@@ -1,0 +1,174 @@
+# Stone Buddy - 힐링 게임 (테라리움 돌 키우기) - Cursor AI 마스터 규칙
+# 이 파일은 모든 팀원이 공유하는 최상위 규칙입니다.
+# 개별 규칙은 .cursor/rules/ 폴더에서 관리합니다.
+
+## 프로젝트 개요
+- **프로젝트명**: Stone Buddy (돌돌이와 또봇의 테라리움)
+- **컨셉**: 로봇 집사 "또봇"에게 채팅으로 명령 → 돌 "돌돌이"를 돌보고 → 코인으로 테라리움 꾸미기 → 돌에게 말 걸면 편지가 오는 힐링 게임
+- **아키텍처**: 하이브리드 앱
+  - **Expo 앱** (app/): 전체 화면 WebView + 채팅 입력 + 음성 녹음 버튼
+  - **웹 앱** (web/): Vite + React + R3F 3D 씬
+  - **통신**: injectJavaScript → window.postMessage
+- **기술 스택**:
+  - 앱: Expo SDK 54, react-native-webview, expo-audio, react-native-safe-area-context
+  - 웹: Vite 7, React 19, @react-three/fiber 9, @react-three/drei 10, Three.js, TypeScript
+  - AI: OpenAI Whisper (STT), GPT-4o-mini (또봇 명령 해석 + 돌돌이 편지 생성)
+  - 상태: Zustand + AsyncStorage
+- **팀**: 4명 (Cursor AI 바이브코딩)
+
+## 캐릭터 소개
+- **돌돌이**: 테라리움의 주인공 돌. 감정 상태(calm, happy, sad, excited, sleepy)에 따라 반응. 말하지 못하지만 편지로 답장
+- **또봇**: 테라리움을 관리하는 로봇 집사. 사용자의 채팅 명령을 받아 10가지 워크플로우 수행
+
+## 핵심 게임 루프
+```
+사용자 채팅 → 또봇 AI 해석 → 워크플로우 수행 → 돌돌이 감정 변화
+       ↓
+코인 적립 (1분/1코인) → 상점에서 아이템 구매 → "~해줘" 요청 → 적용
+       ↓
+음성으로 돌에게 말 걸기 → 대기(10초) → 우편함에 편지 도착
+```
+
+## 10개 워크플로우
+| # | 워크플로우 | action | intent | 돌돌이 반응 |
+|---|-----------|--------|--------|------------|
+| 1 | 돌 닦아주기 | clean | care | happy |
+| 2 | 잡초 뽑기 | weed | care | calm |
+| 3 | 나무에 물주기 | water | care | happy |
+| 4 | 꽃 심기 | plant_flower | decorate | excited |
+| 5 | 바닥 쓸기 | sweep | care | calm |
+| 6 | 상태 확인 | check_status | status | (유지) |
+| 7 | 테라리움 꾸미기 | decorate | decorate | excited |
+| 8 | 아이템 장착 | equip_item | equip | happy |
+| 9 | 춤추기 | dance | special | excited |
+| 10 | 인사하기 | wave | special | happy |
+
+## 프로젝트 구조 (모노레포)
+```
+stone-buddy/
+├── app/                          # FE-1: Expo 네이티브 앱
+│   ├── App.tsx                   # WebView + 채팅 입력 + 녹음 + STT
+│   ├── index.ts
+│   ├── app.json
+│   └── package.json
+├── web/                          # FE-2 + AI: Vite 3D 웹
+│   ├── src/
+│   │   ├── main.tsx
+│   │   ├── App.tsx               # Canvas + 메시지 수신 + AI 연동
+│   │   └── components/
+│   │       ├── Scene.tsx         # 3D 씬 조합
+│   │       ├── Robot.tsx         # 또봇 GLB + 애니메이션
+│   │       ├── Stone.tsx         # 돌돌이 (감정별 표현)
+│   │       ├── Background.tsx    # 테라리움 배경
+│   │       ├── Mailbox.tsx       # 우편함
+│   │       └── EmotionBubble.tsx # 감정 말풍선
+│   ├── public/models/            # GLB 에셋
+│   ├── vite.config.ts
+│   └── package.json
+├── shared/                       # 공유 타입·메시지 규격·상수
+│   ├── types.ts                  # 타입 + 10 워크플로우 + 아이템/편지 타입
+│   ├── constants.ts              # 상수 + 코인/편지 설정 + 아이템 카탈로그
+│   └── message-protocol.ts      # WebView↔Native 메시지 프로토콜
+├── docs/                         # PRD, PLAN
+├── .cursor/rules/                # 역할별 Cursor 규칙 (.mdc)
+├── .cursor/commands/             # 역할별 태스크 커맨드
+├── .cursor/knowledge/            # 에러 해결 지식베이스
+└── .env.example
+```
+
+## 절대 규칙
+
+### 1. 역할별 파일 소유권
+| 역할 | 담당 폴더 | 역할 설명 |
+|------|-----------|-----------|
+| **FE-1** | `app/` | Expo 앱, WebView, 채팅 입력, 녹음, STT |
+| **FE-2** | `web/src/components/`, `web/public/`, CSS | 3D 씬, GLB 모델, 돌돌이, 우편함, 아이템 |
+| **AI-1** | `web/src/App.tsx`, `web/src/main.tsx`, hooks, stores, lib | AI 연동, 명령 해석, 편지 생성, 상태 관리 |
+| **AI-2** | `shared/`, `docs/`, `.cursor/`, `README.md` | 타입, 상점 UI, 코인 시스템, 문서, QA |
+
+다른 팀원의 영역을 수정하려면 반드시 **팀 합의** 후 진행.
+
+### 2. WebView ↔ Native 메시지 규격 (변경 시 전원 합의)
+```typescript
+// === Native → WebView (injectJavaScript) ===
+{ type: 'RECORDING_START', payload: {} }
+{ type: 'VOICE_RESULT', payload: { text: string } }
+{ type: 'TEXT_INPUT', payload: { text: string } }
+{ type: 'APP_STATE_CHANGED', payload: { state: string } }
+
+// === WebView → Native (window.ReactNativeWebView.postMessage) ===
+{ type: 'READY', payload: {} }
+{ type: 'ANIMATION_CHANGED', payload: { animation: string } }
+{ type: 'ROBOT_RESPONSE', payload: { text: string, action?: string, intent?: string } }
+{ type: 'STONE_EMOTION_CHANGED', payload: { emotion: string } }
+{ type: 'LETTER_READY', payload: { content: string, from: string, userMessage: string } }
+```
+
+### 3. 코딩 컨벤션
+- TypeScript strict mode
+- 들여쓰기: 2 spaces, 세미콜론 사용, 작은따옴표
+- 파일명: kebab-case, 컴포넌트: PascalCase, 함수: camelCase, 상수: UPPER_SNAKE_CASE
+- 한국어 주석 OK
+- 모든 export에 TypeScript 타입 명시
+
+### 4. 금지 사항
+- `any` 타입 금지, console.log 금지 (__DEV__ 분기 안에서만 허용)
+- API 키 하드코딩 금지 (환경변수 사용, 없으면 더미 폴백)
+- 다른 팀원 폴더 직접 수정 금지
+- R3F 컴포넌트에서 drei 외 서드파티 3D 라이브러리 임의 추가 금지
+
+### 5. Git 브랜치
+```
+main                     ← 문서·규칙만 (앱 코드 없음)
+├── feature/phase1-setup
+├── feature/phase2-3d        (FE-2)
+├── feature/phase2-native    (FE-1)
+├── feature/phase3-chat      (AI-1)
+├── feature/phase3-content   (AI-2)
+├── feature/phase4-routine
+└── feature/phase5-polish
+```
+머지 순서: shared/types → Phase 2 (3D, native 동시) → Phase 3 (content → chat) → Phase 4 → Phase 5
+커밋: `[영역] type: 설명` (예: `[app] feat: 채팅 입력 UI 추가`)
+
+### 6. 실행 순서
+```bash
+cd web && npm run dev     # 1) Vite dev → http://localhost:5173
+cd app && npx expo start  # 2) Expo 시작
+# iOS: http://<로컬IP>:5173 | Android: http://10.0.2.2:5173
+```
+
+### 7. AI에게 프롬프트할 때 반드시 포함
+```
+"나는 [역할명]이야. [담당 폴더]만 수정해.
+.cursorrules와 .cursor/rules/[역할파일].mdc 규칙을 따라줘."
+```
+
+### 8. 커밋 규칙 (중요!)
+**커밋 요청 시 반드시 `.cursor/rules/commit-review.mdc` 규칙을 따를 것!**
+
+커밋 프로세스:
+1. 변경사항 분석 (`git status`, `git diff`)
+2. 품질 검사 (80점 이상 필수)
+3. 사용자 확인 (승인 없이 커밋 금지)
+4. 커밋 실행
+
+```
+절대 금지:
+- 품질 검사 없이 커밋
+- 사용자 확인 없이 커밋
+- git add -A (민감 파일 포함 위험)
+- .env, API 키 파일 커밋
+```
+
+### 9. Single Source of Truth (반드시 shared/에서 import!)
+- `ROBOT_ANIMATIONS`, `RobotAnimation` → shared/types.ts
+- `WORKFLOWS`, `WorkflowInfo` → shared/types.ts
+- `RobotAction` (11개), `CommandIntent` (6개) → shared/types.ts
+- `TerrariumItem`, `Letter`, `PendingLetter` → shared/types.ts
+- `GameState`, `ChatMessage` → shared/types.ts
+- `COIN_CONFIG`, `LETTER_CONFIG` → shared/constants.ts
+- `ITEM_CATALOG`, `getItemById` → shared/constants.ts
+- `ROBOT_FALLBACK_RESPONSES`, `LETTER_FALLBACK_RESPONSES` → shared/constants.ts
+- `BridgeMessage`, 타입 가드 함수들 → shared/message-protocol.ts
+- `LetterReadyPayload` → shared/message-protocol.ts

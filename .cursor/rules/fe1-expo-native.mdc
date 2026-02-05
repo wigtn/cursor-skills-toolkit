@@ -1,0 +1,268 @@
+---
+description: FE-1 역할 - Expo 네이티브 앱 (WebView + 녹음 + STT + 텍스트 입력)
+globs: app/**
+alwaysApply: false
+---
+
+# FE-1: Expo 네이티브 앱 담당
+# 적용 경로: app/**
+
+## 담당 영역
+- `app/` 폴더 내 모든 파일
+- Expo 앱 셋업, WebView 호스팅, 음성 녹음, Whisper STT, 텍스트 입력, 네이티브 기능
+
+## 파일 구조
+```
+app/
+├── App.tsx                 # 메인 앱: SafeArea + WebView + 녹음 버튼 + 텍스트 입력
+├── index.ts                # registerRootComponent(App)
+├── app.json                # Expo 설정 (orientation: portrait)
+├── tsconfig.json           # extends "expo/tsconfig.base", strict: true
+├── package.json
+├── assets/
+│   ├── icon.png
+│   ├── splash-icon.png
+│   ├── adaptive-icon.png
+│   └── favicon.png
+└── .gitignore
+```
+
+## 핵심 구현 패턴 (실제 코드 기준)
+
+### App.tsx 구조
+```typescript
+import { WebView } from 'react-native-webview';
+import { useAudioRecorder, RecordingPresets } from 'expo-audio';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
+
+// WebView URL 설정
+const WEB_URL = __DEV__
+  ? Platform.select({
+      ios: 'http://<로컬IP>:5173',      // 실제 IP로 교체
+      android: 'http://10.0.2.2:5173',
+      default: 'http://localhost:5173',
+    })
+  : 'https://your-deployed-url.com';
+
+// API 키 (환경변수 우선, 없으면 더미)
+const OPENAI_API_KEY = process.env.EXPO_PUBLIC_OPENAI_API_KEY || 'YOUR_OPENAI_API_KEY';
+```
+
+### 녹음 → STT 플로우
+```
+사용자 탭 → startRecording()
+  → expo-audio recorder.prepareToRecordAsync()
+  → recorder.record()
+  → sendToWebView('RECORDING_START', {})
+
+사용자 재탭 → stopRecording()
+  → recorder.stop()
+  → recorder.uri 확보
+  → API 키가 더미? → 랜덤 더미 문장 사용
+  → API 키가 실제? → transcribeAudio(uri) → Whisper API
+  → sendToWebView('VOICE_RESULT', { text })
+```
+
+### 텍스트 입력 플로우 (신규)
+```
+사용자 텍스트 입력 → TextInput에 타이핑
+  → 전송 버튼 클릭 or 키보드 제출
+  → sendToWebView('TEXT_INPUT', { text })
+  → 입력창 초기화
+```
+
+### sendToWebView 구현 (절대 패턴)
+```typescript
+const sendToWebView = (type: string, payload: object): void => {
+  webViewRef.current?.injectJavaScript(
+    `window.postMessage(JSON.stringify(${JSON.stringify({ type, payload })}), '*'); true;`
+  );
+};
+```
+
+### Whisper API 호출
+```typescript
+const transcribeAudio = async (audioUri: string): Promise<string> => {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: audioUri,
+    type: 'audio/m4a',
+    name: 'recording.m4a',
+  } as unknown as Blob);
+  formData.append('model', 'whisper-1');
+  formData.append('language', 'ko');
+
+  const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${OPENAI_API_KEY}` },
+    body: formData,
+  });
+  const result = await response.json();
+  return result.text;
+};
+```
+
+### WebView 필수 설정
+```tsx
+<WebView
+  ref={webViewRef}
+  source={{ uri: WEB_URL }}
+  javaScriptEnabled={true}
+  domStorageEnabled={true}
+  allowsInlineMediaPlayback={true}
+  mediaPlaybackRequiresUserAction={false}
+  originWhitelist={['*']}
+  onLoadEnd={() => setIsLoading(false)}
+  onMessage={handleWebViewMessage}
+  style={{ flex: 1 }}
+/>
+```
+
+## 텍스트 입력 UI 구현 가이드 (신규)
+
+### UI 레이아웃
+```
+┌─────────────────────────┐
+│   StatusBar (dark)       │
+├─────────────────────────┤
+│                         │
+│     WebView             │  ← 3D 씬 (web/ 프로젝트)
+│     (전체 화면)          │
+│                         │
+├─────────────────────────┤
+│ ┌─────────────────┬───┐ │
+│ │ TextInput       │ ➤ │ │  ← 텍스트 입력창 + 전송 버튼
+│ └─────────────────┴───┘ │
+├─────────────────────────┤
+│  [🎤 탭하여 녹음]        │  ← 녹음 버튼
+│  디버그 텍스트           │  ← __DEV__일 때만
+└─────────────────────────┘
+```
+
+### TextInput 컴포넌트 구현
+```typescript
+import { useState } from 'react';
+import { View, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+
+const [inputText, setInputText] = useState('');
+
+const handleTextSubmit = () => {
+  if (!inputText.trim()) return;
+
+  sendToWebView('TEXT_INPUT', { text: inputText.trim() });
+  setInputText(''); // 입력창 초기화
+};
+
+// JSX
+<View style={styles.inputContainer}>
+  <TextInput
+    style={styles.textInput}
+    value={inputText}
+    onChangeText={setInputText}
+    onSubmitEditing={handleTextSubmit}
+    placeholder="또봇에게 명령해보세요..."
+    placeholderTextColor="#999"
+    returnKeyType="send"
+  />
+  <TouchableOpacity
+    style={styles.sendButton}
+    onPress={handleTextSubmit}
+    disabled={!inputText.trim()}
+  >
+    <Text style={styles.sendButtonText}>➤</Text>
+  </TouchableOpacity>
+</View>
+
+// 스타일
+const styles = StyleSheet.create({
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#f5f5f5',
+    borderTopWidth: 1,
+    borderTopColor: '#e0e0e0',
+  },
+  textInput: {
+    flex: 1,
+    height: 40,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    paddingHorizontal: 16,
+    fontSize: 16,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  sendButton: {
+    marginLeft: 8,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#4CAF50',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sendButtonText: {
+    color: '#fff',
+    fontSize: 18,
+  },
+});
+```
+
+### 입력 모드 전환 (음성/텍스트)
+```typescript
+// 선택적: 음성/텍스트 모드 전환 버튼 추가
+const [inputMode, setInputMode] = useState<'voice' | 'text'>('voice');
+
+// 음성 모드 ↔ 텍스트 모드 전환
+<TouchableOpacity onPress={() => setInputMode(mode => mode === 'voice' ? 'text' : 'voice')}>
+  <Text>{inputMode === 'voice' ? '⌨️' : '🎤'}</Text>
+</TouchableOpacity>
+```
+
+## 상태 관리 (App.tsx 내부)
+```typescript
+const [isRecording, setIsRecording] = useState(false);
+const [isLoading, setIsLoading] = useState(true);       // WebView 로딩
+const [isProcessing, setIsProcessing] = useState(false); // STT 처리 중
+const [permissionGranted, setPermissionGranted] = useState(false);
+const [statusText, setStatusText] = useState('');
+const [inputText, setInputText] = useState('');          // 텍스트 입력 (신규)
+```
+
+## 버튼 상태별 표시
+| 상태 | 아이콘 | 텍스트 | 색상 |
+|------|--------|--------|------|
+| 기본 | 🎤 | 탭하여 녹음 | 기본색 |
+| 녹음 중 | 🔴 | 녹음 중... 탭하여 중지 | 빨강 |
+| 처리 중 | ⏳ | 음성 인식 중... | 주황 |
+| 권한 없음 | 🎤 | 마이크 권한 필요 | 회색 |
+
+## 에러 핸들링 필수
+- 마이크 권한 거부 → Alert 표시
+- Whisper API 실패 → 에러 로그 + statusText에 표시
+- API 키 없음 → 더미 문장으로 폴백 (["안녕! 반가워!", ...] 중 랜덤)
+- WebView 로드 실패 → 로딩 오버레이 유지 + 에러 표시
+- 텍스트 입력 빈 문자열 → 전송 버튼 비활성화
+
+## 의존성 (package.json)
+```json
+{
+  "dependencies": {
+    "expo": "~54.0.33",
+    "expo-audio": "^1.1.1",
+    "expo-av": "*",
+    "expo-status-bar": "*",
+    "react": "19.1.0",
+    "react-native": "0.81.5",
+    "react-native-safe-area-context": "*",
+    "react-native-webview": "13.15.0"
+  }
+}
+```
+
+## 수정 금지 영역
+- `web/` 폴더 전체
+- `shared/` 폴더의 타입 정의 (사용만 가능, 수정은 AI-2 담당)
+- 메시지 규격 (RECORDING_START, VOICE_RESULT, TEXT_INPUT)의 구조 변경

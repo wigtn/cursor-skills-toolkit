@@ -1,0 +1,303 @@
+---
+description: AI-1 역할 - AI 연동, 채팅, 상태 관리, 메시지 수신 (또봇 로봇 집사)
+globs: web/src/App.tsx, web/src/main.tsx, web/src/hooks/**, web/src/lib/openai.*, web/src/lib/prompts.*, web/src/lib/robotResponses.*, web/src/stores/**
+alwaysApply: false
+---
+
+# AI-1: AI 연동 / 채팅 / 상태 관리 담당 (또봇 로봇 집사)
+# 적용 경로: web/src/App.tsx, web/src/main.tsx, hooks, stores, lib/openai·prompts·robotResponses
+
+## 담당 영역
+- `web/src/App.tsx` — Canvas 래퍼 + 메시지 수신 + 애니메이션 상태 관리
+- `web/src/main.tsx` — React 진입점
+- `web/src/hooks/` — 커스텀 훅 (useChat, useGameState 등)
+- `web/src/stores/` — 상태 관리 (Zustand 등)
+- `web/src/lib/openai.ts` — OpenAI API 호출
+- `web/src/lib/prompts.ts` — 시스템 프롬프트
+- `web/src/lib/robotResponses.ts` — 로봇 응답 로직
+
+## App.tsx 핵심 구조 (현재 구현 기준)
+```typescript
+import { useState, Suspense } from 'react';
+import { Canvas } from '@react-three/fiber';
+import Scene from './components/Scene';
+import { ROBOT_ANIMATIONS, RobotAnimation } from './components/Robot';
+
+function App() {
+  const [animation, setAnimation] = useState<RobotAnimation>('Idle');
+
+  return (
+    <div className="app">
+      {/* 3D 캔버스 */}
+      <Canvas
+        shadows
+        camera={{ position: [0, 3, 8], fov: 45 }}
+        style={{ background: 'linear-gradient(to bottom, #e8f4f8, #d4e8ed)' }}
+      >
+        <Suspense fallback={null}>
+          <Scene animation={animation} />
+        </Suspense>
+      </Canvas>
+
+      {/* 타이틀 */}
+      <div className="title">
+        <h1>Stone Buddy</h1>
+        <p>돌돌이와 또봇의 테라리움</p>
+      </div>
+
+      {/* 애니메이션 버튼 */}
+      <div className="animation-controls">
+        {ROBOT_ANIMATIONS.map(anim => (
+          <button
+            key={anim}
+            className={`anim-btn ${animation === anim ? 'active' : ''}`}
+            onClick={() => setAnimation(anim)}
+          >
+            <span className="anim-emoji">{animationInfo[anim].emoji}</span>
+            <span className="anim-name">{animationInfo[anim].name}</span>
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+## 메시지 수신 구현
+```typescript
+useEffect(() => {
+  const handleMessage = (event: MessageEvent) => {
+    try {
+      const data = typeof event.data === 'string'
+        ? JSON.parse(event.data)
+        : event.data;
+
+      switch (data.type) {
+        case 'RECORDING_START':
+          // 녹음 시작 시 시각 피드백 (로봇 Wave 애니메이션)
+          setAnimation('Wave');
+          break;
+        case 'VOICE_RESULT':
+          // STT 텍스트 수신 → AI 처리 → 응답 반환
+          handleUserInput(data.payload.text, 'voice');
+          break;
+        case 'TEXT_INPUT':
+          // 텍스트 입력 수신 → AI 처리 → 응답 반환
+          handleUserInput(data.payload.text, 'text');
+          break;
+      }
+    } catch (e) {
+      // JSON 파싱 실패 무시
+    }
+  };
+
+  window.addEventListener('message', handleMessage);
+  return () => window.removeEventListener('message', handleMessage);
+}, []);
+```
+
+## 또봇(로봇 집사) 시스템 프롬프트
+
+### 캐릭터 설정
+- 이름: 또봇 (테라리움 로봇 집사)
+- 역할: 돌돌이(돌 캐릭터)를 돌보고 테라리움을 관리
+- 성격: 친근하고 귀여운 말투, 명령을 수행하는 집사
+- 모델: GPT-4o-mini
+- 설정: max_tokens 150, temperature 0.8
+
+### 시스템 프롬프트 (반드시 사용)
+```typescript
+const ROBOT_SYSTEM_PROMPT = `
+너는 테라리움 속 로봇 집사 "또봇"이야.
+주인공 돌 캐릭터 "돌돌이"를 정성껏 돌봐야 해.
+
+역할:
+- 사용자의 명령을 듣고 테라리움을 관리해
+- 돌돌이의 상태를 관찰하고 보고해
+- 친근하고 귀여운 말투로 대화해 (반말 OK)
+
+응답 형식 (반드시 JSON):
+{
+  "intent": "decorate|care|status|chat|special",
+  "action": "plant_flower|water|clean|dance|wave|check_status|idle|null",
+  "item": "flower|tree|water|null",
+  "response": "사용자에게 보여줄 대답 (50자 이내)",
+  "stoneEmotionChange": "happy|sad|excited|calm|sleepy|null"
+}
+
+규칙:
+- response는 반드시 50자 이내
+- 명령을 못 알아들으면 intent: "chat", action: null
+- 이모지: 🤖🔧💧🌸🌿✨💪👍🎵😊 만 사용
+- 돌돌이 기분 변화가 있으면 stoneEmotionChange 반환
+`;
+```
+
+### 명령 의도별 응답 예시
+
+| 의도 | 사용자 입력 예시 | 응답 예시 |
+|------|------------------|-----------|
+| decorate | "꽃 심어줘" | {"intent":"decorate","action":"plant_flower","item":"flower","response":"예쁜 꽃 심을게요! 🌸","stoneEmotionChange":"happy"} |
+| care | "물 좀 줘" | {"intent":"care","action":"water","item":"water","response":"물 줄게요~ 시원하겠다! 💧","stoneEmotionChange":null} |
+| status | "돌돌이 어때?" | {"intent":"status","action":"check_status","item":null,"response":"돌돌이가 기분 좋아 보여요! 😊","stoneEmotionChange":null} |
+| chat | "안녕!" | {"intent":"chat","action":"wave","item":null,"response":"안녕하세요! 반가워요~ 👋","stoneEmotionChange":"happy"} |
+| special | "춤 춰봐" | {"intent":"special","action":"dance","item":null,"response":"신나게 춤출게요! 🎵","stoneEmotionChange":"excited"} |
+
+### 좋은 응답 예시
+```json
+{"intent":"decorate","action":"plant_flower","item":"flower","response":"예쁜 꽃 심었어요! 돌돌이가 좋아해요 🌸","stoneEmotionChange":"happy"}
+{"intent":"care","action":"water","item":"water","response":"물 주기 완료! 시원하겠다~ 💧","stoneEmotionChange":null}
+{"intent":"status","action":"check_status","item":null,"response":"돌돌이 기분이 좋아요! 😊","stoneEmotionChange":null}
+```
+
+### 나쁜 응답 예시 (금지)
+```
+"알겠습니다. 지금 바로 꽃을 심어드리겠습니다." (← JSON 아님)
+{"response":"이건 50자가 훨씬 넘는 아주 긴 응답이에요 어쩌고 저쩌고..."} (← 50자 초과)
+{"intent":"unknown"} (← unknown은 유효하지 않음)
+```
+
+## OpenAI 호출 패턴
+```typescript
+// lib/openai.ts
+import { OPENAI_CONFIG } from '../../shared/constants';
+import { CommandResult, RobotAction, CommandIntent, StoneEmotion } from '../../shared/types';
+
+interface RobotAIResponse {
+  intent: CommandIntent;
+  action: RobotAction | null;
+  item: string | null;
+  response: string;
+  stoneEmotionChange?: StoneEmotion | null;
+}
+
+async function chatWithRobot(userMessage: string): Promise<CommandResult> {
+  // API 키 없으면 폴백 응답
+  if (!apiKey || apiKey === 'YOUR_OPENAI_API_KEY') {
+    return getRandomFallbackResponse();
+  }
+
+  const response = await fetch(OPENAI_CONFIG.CHAT_ENDPOINT, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model: OPENAI_CONFIG.CHAT_MODEL,
+      max_tokens: OPENAI_CONFIG.MAX_TOKENS,
+      temperature: OPENAI_CONFIG.TEMPERATURE,
+      response_format: { type: 'json_object' },  // JSON 응답 강제
+      messages: [
+        { role: 'system', content: ROBOT_SYSTEM_PROMPT },
+        { role: 'user', content: userMessage },
+      ],
+    }),
+  });
+
+  const data = await response.json();
+  const parsed = JSON.parse(data.choices[0].message.content) as RobotAIResponse;
+
+  return {
+    intent: parsed.intent,
+    action: parsed.action,
+    item: parsed.item,
+    response: parsed.response,
+    stoneEmotionChange: parsed.stoneEmotionChange,
+  };
+}
+```
+
+## 폴백 응답 (API 없을 때)
+```typescript
+import { ROBOT_FALLBACK_RESPONSES } from '../../shared/constants';
+import { CommandResult } from '../../shared/types';
+
+function getRandomFallbackResponse(): CommandResult {
+  const response = ROBOT_FALLBACK_RESPONSES[
+    Math.floor(Math.random() * ROBOT_FALLBACK_RESPONSES.length)
+  ];
+  return {
+    intent: 'chat',
+    action: 'idle',
+    item: null,
+    response,
+    stoneEmotionChange: null,
+  };
+}
+```
+
+## 통합 입력 핸들러 (음성/텍스트 공통)
+```typescript
+import { detectCommandIntent, ACTION_TO_ANIMATION } from '../../shared/types';
+
+async function handleUserInput(text: string, source: 'voice' | 'text') {
+  try {
+    // 1. AI에게 명령 해석 요청
+    const result = await chatWithRobot(text);
+
+    // 2. 애니메이션 전환
+    if (result.action) {
+      const animation = ACTION_TO_ANIMATION[result.action];
+      setAnimation(animation);
+    }
+
+    // 3. 돌돌이 감정 변화
+    if (result.stoneEmotionChange) {
+      setStoneEmotion(result.stoneEmotionChange);
+    }
+
+    // 4. 응답 표시
+    setResponseText(result.response);
+
+  } catch (error) {
+    // 에러 시 폴백
+    const fallback = getRandomFallbackResponse();
+    setResponseText(fallback.response);
+  }
+}
+```
+
+## 상태 관리 확장 (Zustand 패턴)
+```typescript
+// stores/game-state.ts
+import { StoneEmotion, RobotAnimation, StoneState } from '../../shared/types';
+
+interface GameState {
+  stone: StoneState;
+  currentAnimation: RobotAnimation;
+  lastInputText: string | null;
+  interactionCount: number;
+
+  // Actions
+  setAnimation: (anim: RobotAnimation) => void;
+  setStoneEmotion: (emotion: StoneEmotion) => void;
+  incrementInteraction: () => void;
+}
+
+const useGameStore = create<GameState>((set) => ({
+  stone: {
+    emotion: 'calm',
+    lastInteraction: Date.now(),
+    name: '돌돌이',
+  },
+  currentAnimation: 'Idle',
+  lastInputText: null,
+  interactionCount: 0,
+
+  setAnimation: (anim) => set({ currentAnimation: anim }),
+  setStoneEmotion: (emotion) => set((state) => ({
+    stone: { ...state.stone, emotion, lastInteraction: Date.now() },
+  })),
+  incrementInteraction: () => set((state) => ({
+    interactionCount: state.interactionCount + 1,
+  })),
+}));
+```
+
+## 수정 금지 영역
+- `app/` 폴더 (FE-1 담당)
+- `web/src/components/` 폴더 (FE-2 담당)
+- `web/src/App.css`, `web/src/index.css` (FE-2 담당)
+- `shared/` 타입 정의 (AI-2 담당)
+- 메시지 규격 구조 변경

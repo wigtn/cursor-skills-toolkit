@@ -1,0 +1,311 @@
+---
+description: AI-2 역할 - 타입 정의, 문서, 규칙, 콘텐츠, 통합 관리
+globs: shared/**, docs/**, .cursor/**, README.md, .env.example
+alwaysApply: false
+---
+
+# AI-2: 타입 / 문서 / 규칙 / 통합 담당
+# 적용 경로: shared/**, docs/**, .cursor/**, README.md, .env.example
+
+## 담당 영역
+- `shared/` — 공유 타입, 메시지 프로토콜, 상수
+- `docs/` — PRD, PLAN, 가이드 문서
+- `.cursor/rules/` — Cursor 규칙 관리
+- `.cursor/commands/` — 역할별 태스크 커맨드
+- `.cursor/knowledge/` — 에러 해결 지식베이스
+- `README.md`, `.env.example`
+
+## shared/ 파일 구조
+```
+shared/
+├── types.ts                # 전체 공유 타입 정의
+├── message-protocol.ts     # WebView ↔ Native 메시지 규격
+└── constants.ts            # 공유 상수
+```
+
+### shared/types.ts
+```typescript
+// === 캐릭터 이름 ===
+export const ROBOT_NAME = '또봇' as const;
+export const STONE_NAME = '돌돌이' as const;
+
+// === 돌돌이 감정 ===
+export type StoneEmotion = 'calm' | 'happy' | 'sad' | 'excited' | 'sleepy';
+
+export interface StoneState {
+  emotion: StoneEmotion;
+  lastInteraction: number;  // timestamp
+  name: string;             // '돌돌이'
+}
+
+export const STONE_EMOTION_TRIGGERS: Record<StoneEmotion, string[]>;
+
+// === 로봇 액션 ===
+export type RobotAction = 'plant_flower' | 'water' | 'clean' | 'dance' | 'wave' | 'check_status' | 'idle';
+
+// === 명령 의도 ===
+export type CommandIntent = 'decorate' | 'care' | 'status' | 'chat' | 'special';
+
+// === 명령 결과 ===
+export interface CommandResult {
+  intent: CommandIntent;
+  action: RobotAction | null;
+  item: string | null;
+  response: string;
+  stoneEmotionChange?: StoneEmotion | null;
+}
+
+// === 액션 → 애니메이션 매핑 ===
+export const ACTION_TO_ANIMATION: Record<RobotAction, RobotAnimation>;
+
+// === 헬퍼 함수 ===
+export const detectCommandIntent = (text: string): CommandIntent;
+export const detectStoneEmotion = (text: string): StoneEmotion | undefined;
+
+// === 게임 상태 ===
+export interface GameState {
+  stone: StoneState;
+  currentAnimation: RobotAnimation;
+  lastInputText: string | null;
+  interactionCount: number;
+  totalPlayTime: number;
+}
+
+// === 로봇 애니메이션 ===
+export const ROBOT_ANIMATIONS = [
+  'Idle', 'Walking', 'Running', 'Dance', 'Death',
+  'Sitting', 'Standing', 'Jump', 'Yes', 'No',
+  'Wave', 'Punch', 'ThumbsUp',
+] as const;
+export type RobotAnimation = typeof ROBOT_ANIMATIONS[number];
+
+// === 채팅 ===
+export interface ChatMessage {
+  id: string;
+  role: 'user' | 'robot';
+  content: string;
+  timestamp: number;
+}
+
+// === 테라리움 아이템 ===
+export interface TerrariumItem {
+  id: string;
+  name: string;
+  type: 'plant' | 'decoration' | 'stone';
+  description: string;
+  price: number;
+}
+```
+
+### shared/message-protocol.ts
+```typescript
+// 이 파일은 팀 전체 합의 없이 수정 금지!
+// WebView ↔ Native 통신의 유일한 계약입니다.
+
+// === 메시지 타입 ===
+export type NativeToWebMessageType =
+  | 'RECORDING_START'     // 녹음 시작됨
+  | 'VOICE_RESULT'        // STT 결과
+  | 'TEXT_INPUT'          // 텍스트 입력 (신규)
+  | 'APP_STATE_CHANGED';  // 앱 foreground/background
+
+export type WebToNativeMessageType =
+  | 'READY'                   // 웹 로드 완료
+  | 'ANIMATION_CHANGED'       // 애니메이션 변경 알림
+  | 'ROBOT_RESPONSE'          // 로봇 응답 (신규)
+  | 'STONE_EMOTION_CHANGED';  // 돌돌이 감정 변화 (신규)
+
+// === 메시지 구조 ===
+export interface BridgeMessage<T = unknown> {
+  type: NativeToWebMessageType | WebToNativeMessageType;
+  payload: T;
+}
+
+// === 페이로드 타입 ===
+export interface VoiceResultPayload { text: string; }
+export interface TextInputPayload { text: string; }
+export interface AnimationChangedPayload { animation: string; }
+export interface RobotResponsePayload { text: string; action?: RobotAction; intent?: CommandIntent; }
+export interface StoneEmotionChangedPayload { emotion: StoneEmotion; previousEmotion?: StoneEmotion; }
+
+// === 상태 머신 ===
+export type AppMessageState =
+  | 'IDLE'
+  | 'RECORDING'
+  | 'PROCESSING_STT'
+  | 'PROCESSING_TEXT'  // 텍스트 입력 처리 (신규)
+  | 'PROCESSING_AI'
+  | 'ANIMATING';
+
+// IDLE에서 PROCESSING_TEXT로 전환 가능
+export const MESSAGE_STATE_TRANSITIONS: Record<AppMessageState, AppMessageState[]>;
+
+// === Native → WebView 전송 방법 ===
+// webViewRef.current.injectJavaScript(
+//   `window.postMessage(JSON.stringify({type, payload}), '*'); true;`
+// )
+
+// === WebView → Native 전송 방법 ===
+// window.ReactNativeWebView?.postMessage(JSON.stringify({type, payload}))
+```
+
+### shared/constants.ts
+```typescript
+// 환경변수 키
+export const ENV_KEYS = {
+  OPENAI_API_KEY: 'EXPO_PUBLIC_OPENAI_API_KEY',
+  COIN_INTERVAL: 'EXPO_PUBLIC_COIN_INTERVAL',
+  MAX_TOKENS: 'EXPO_PUBLIC_MAX_TOKENS',
+  DEBUG: 'EXPO_PUBLIC_DEBUG',
+  FORCE_2D_FALLBACK: 'EXPO_PUBLIC_FORCE_2D_FALLBACK',
+} as const;
+
+// OpenAI 설정
+export const OPENAI_CONFIG = {
+  STT_MODEL: 'whisper-1',
+  CHAT_MODEL: 'gpt-4o-mini',
+  MAX_TOKENS: 150,
+  TEMPERATURE: 0.8,
+  LANGUAGE: 'ko',
+} as const;
+
+// 로봇(또봇) 이모지 허용 목록
+export const ROBOT_EMOJIS = ['🤖', '🔧', '💧', '🌸', '🌿', '✨', '💪', '👍', '🎵', '😊'] as const;
+
+// 로봇 폴백 응답 (API 에러 시)
+export const ROBOT_FALLBACK_RESPONSES = [
+  '앗, 잠깐 멍해졌어요... 다시 말해주실래요? 🤖',
+  '네네! 지금 바로 할게요~ 💪',
+  ...
+] as const;
+
+// 돌돌이 감정별 메시지
+export const STONE_EMOTION_MESSAGES: Record<StoneEmotion, string[]>;
+
+// 명령 의도별 예시
+export const COMMAND_EXAMPLES: Record<CommandIntent, string[]>;
+
+// 더미 STT 문장 (API 키 없을 때)
+export const DUMMY_STT_SENTENCES = [
+  '안녕! 반가워!',
+  '꽃을 심어줘',
+  '물 좀 줘',
+  ...
+] as const;
+
+// WebView URL
+export const WEB_URLS = {
+  DEV_IOS: (ip: string) => `http://${ip}:5173`,
+  DEV_ANDROID: 'http://10.0.2.2:5173',
+  DEV_DEFAULT: 'http://localhost:5173',
+  PRODUCTION: 'https://your-deployed-url.com',
+} as const;
+```
+
+## .cursor/commands/ 태스크 커맨드
+
+### 파일 구조
+```
+.cursor/commands/
+├── phase1-setup.md           # 전원: 환경 설정
+├── fe1-all-tasks.md          # FE-1: Expo 앱 태스크
+├── fe2-all-tasks.md          # FE-2: 3D 씬 태스크
+├── ai1-all-tasks.md          # AI-1: 채팅/AI 태스크
+└── ai2-all-tasks.md          # AI-2: 타입/문서 태스크
+```
+
+### 커맨드 사용법
+Cursor에서 `@commands` 또는 파일을 열고 "이 태스크 진행해줘"라고 지시.
+
+## .cursor/knowledge/ 에러 지식베이스
+
+### 기록 형식
+```markdown
+## [에러 제목]
+- **날짜**: YYYY-MM-DD
+- **상태**: 해결됨 / 미해결
+- **증상**: 어떤 에러가 발생했는지
+- **원인**: 왜 발생했는지
+- **해결**: 어떻게 해결했는지
+- **관련 파일**: 어떤 파일이 관련되는지
+```
+
+### 알려진 에러 (main 브랜치 knowledge 기준)
+1. **expo-three gl.endFrameEXP() 누락** → 검은 화면. animate 루프 마지막에 필수 호출
+2. **OpenAI 401** → API 키 누락/만료. 더미 폴백으로 전환
+3. **NativeWind 미적용** → babel 설정 누락
+4. **Response body null** → 스트리밍 대신 비스트리밍 모드 권장
+
+## 문서 관리 규칙
+- PRD 변경 → `docs/prd/` 에 버전 명시 (v5.0, v5.1...)
+- PLAN 변경 → `docs/todo_plan/` 에 Phase 번호와 함께
+- 아카이브 → `docs/archive/` 로 이동 (삭제 금지)
+
+## 타입 사용 예시
+
+### StoneEmotion 사용
+```typescript
+import { StoneEmotion, STONE_EMOTION_TRIGGERS, detectStoneEmotion } from '../../shared/types';
+
+// 감정 감지
+const emotion = detectStoneEmotion(userText); // 'happy' | 'sad' | undefined
+
+// 감정 트리거 확인
+if (STONE_EMOTION_TRIGGERS.happy.some(k => text.includes(k))) {
+  setStoneEmotion('happy');
+}
+```
+
+### CommandResult 사용
+```typescript
+import { CommandResult, detectCommandIntent, ACTION_TO_ANIMATION } from '../../shared/types';
+
+// 명령 의도 파악
+const intent = detectCommandIntent(text); // 'decorate' | 'care' | 'status' | 'chat' | 'special'
+
+// AI 응답 처리
+const result: CommandResult = await chatWithRobot(text);
+if (result.action) {
+  const animation = ACTION_TO_ANIMATION[result.action];
+  setAnimation(animation);
+}
+```
+
+### 메시지 프로토콜 사용
+```typescript
+import {
+  safeParseBridgeMessage,
+  isTextInputPayload,
+  isVoiceResultPayload,
+  canTransition,
+} from '../../shared/message-protocol';
+
+// 메시지 수신
+const handleMessage = (event: MessageEvent) => {
+  const message = safeParseBridgeMessage(event.data);
+  if (!message) return;
+
+  switch (message.type) {
+    case 'TEXT_INPUT':
+      if (isTextInputPayload(message.payload)) {
+        handleUserInput(message.payload.text, 'text');
+      }
+      break;
+    case 'VOICE_RESULT':
+      if (isVoiceResultPayload(message.payload)) {
+        handleUserInput(message.payload.text, 'voice');
+      }
+      break;
+  }
+};
+
+// 상태 전환 검증
+if (canTransition(currentState, 'PROCESSING_TEXT')) {
+  setState('PROCESSING_TEXT');
+}
+```
+
+## 수정 금지 영역
+- `app/` 폴더 (FE-1 담당)
+- `web/src/components/` (FE-2 담당)
+- `web/src/App.tsx`, `web/src/main.tsx` (AI-1 담당)

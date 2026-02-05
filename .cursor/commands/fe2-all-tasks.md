@@ -1,215 +1,88 @@
-# FE-2: 전체 작업 (상태/로직 리드)
+# FE-2: 3D 웹 씬 전체 태스크
 
-**담당자**: FE-2
-**핵심 역할**: 타입 정의, 상태 관리, 상점, 정령 UI, 감정 루틴
+## Phase 2: 3D 씬 기본 구조
 
-## 컨텍스트 파일
-@docs/prd/PRD_stone-garden.md
-@docs/todo_plan/PLAN_stone-garden.md
+### Task 2-1: Scene.tsx
+- [ ] useThree → gl.setClearColor('#87CEEB')
+- [ ] ambientLight intensity 0.8
+- [ ] directionalLight [10,20,10] intensity 1.5 castShadow
+- [ ] hemisphereLight #87CEEB #8B4513 0.5
+- [ ] Environment preset="sunset" (drei)
+- [ ] OrbitControls (enablePan, enableZoom, minDistance 1, maxDistance 30)
 
----
+### Task 2-2: Robot.tsx
+- [ ] useGLTF('/models/RobotExpressive.glb')
+- [ ] SkeletonUtils.clone(scene) — useMemo
+- [ ] useAnimations(animations, group)
+- [ ] ROBOT_ANIMATIONS 배열 + RobotAnimation 타입 export
+- [ ] 애니메이션 전환: fadeOut(0.2) → reset → fadeIn(0.2) → play
+- [ ] useGLTF.preload 추가
 
-## Phase 1 (11:00~11:20) - 환경 설정
+### Task 2-3: ForestHouse.tsx
+- [ ] useGLTF('/models/forest_house.glb')
+- [ ] primitive object={scene} position/scale props
+- [ ] useGLTF.preload 추가
 
-**전원 함께 진행**
+### Task 2-4: GLB 모델 배치
+- [ ] public/models/RobotExpressive.glb 확인
+- [ ] public/models/forest_house.glb 확인
+- [ ] 브라우저에서 3D 씬 렌더링 확인
 
-FE-2 담당:
-- [ ] 상태 관리 패키지 설치
-```bash
-npm install zustand
-npx expo install @react-native-async-storage/async-storage
-npm install @gorhom/bottom-sheet
-npx expo install react-native-reanimated react-native-gesture-handler
-```
-- [ ] 폴더 구조 생성
-- [ ] Git 초기화 + push
+## Phase 2: 캐릭터 + 감정 표현
 
----
+### Task 2-5: Stone.tsx (돌 캐릭터)
+- [ ] sphereGeometry 몸체 + 머리 위 납작 구
+- [ ] 눈: 흰자 + 눈동자 + 하이라이트(emissive)
+- [ ] 볼터치: circleGeometry, 핑크, 반투명
+- [ ] useFrame: emotion별 애니메이션
+  - calm: sin 기반 호흡, 살짝 흔들림
+  - excited: 통통 튀기, rotation
+- [ ] hover: scale 1.1 lerp 보간
 
-## Phase 2 (11:20~12:40) - 상태 + 상점 ⭐ 메인
+### Task 2-6: EmotionBubble.tsx
+- [ ] props: emotion ('calm'|'excited'), visible (boolean)
+- [ ] 한 글자씩 타이핑 애니메이션 (setInterval)
+  - calm: '...' (300ms 간격)
+  - excited: '..!' (150ms 간격)
+- [ ] CSS: 그라데이션 배경, 삼각형 꼬리, 등장 애니메이션
 
-### 2-1. 타입 정의 (가장 먼저! 다른 담당자 참조)
+### Task 2-7: EmotionBubble.css
+- [ ] .emotion-bubble: absolute, top 25%, bubble-appear 애니메이션
+- [ ] .calm / .excited 각각 다른 그라데이션
+- [ ] .bubble-tail: border 삼각형
+- [ ] @keyframes: bubble-appear, bubble-bounce, typing-pulse
 
-`types/game.ts`
-```typescript
-export type SpiritState = 'calm' | 'tired' | 'sparkling';
+## Phase 3: 스타일 + UI
 
-export interface GameState {
-  coins: number;
-  ownedItems: string[];
-  lastVisit: number;
-  consecutiveVisitDays: number;
-  totalChatCount: number;
-  diaryEntries: DiaryEntry[];
-}
+### Task 3-1: App.css
+- [ ] .app: 100vw/100vh, relative, overflow hidden
+- [ ] .title: absolute top, pointer-events none, Pretendard
+- [ ] .animation-controls: absolute bottom, flex wrap, backdrop-filter
+- [ ] .anim-btn: column flex, hover/active 스타일
+- [ ] @media (max-width: 600px) 반응형
 
-export interface DiaryEntry {
-  id: string;
-  date: string;
-  content: string;
-  spiritState: SpiritState;
-  sessionDuration: number;
-  createdAt: number;
-}
+### Task 3-2: index.css
+- [ ] 전역 리셋 (margin, padding, box-sizing)
+- [ ] 100% 높이, overflow hidden
+- [ ] Pretendard 폰트, antialiased
+- [ ] 터치 하이라이트 제거, 스크롤바 숨김
+- [ ] canvas: user-select none, touch-action none
 
-export interface SessionContext {
-  startTime: number;
-  chatCount: number;
-  purchasedItem: string | null;
-  viewDuration: number;
-}
-```
+## Phase 4: 음성 연동
 
-`types/items.ts`
-```typescript
-export interface TerrariumItem {
-  id: string;
-  name: string;
-  price: number;
-  emotionalFunction: string;
-  emoji: string;
-  color: string;
-}
-```
+### Task 4-1: 음성 → 감정 시각 피드백
+- [ ] VOICE_RESULT 수신 시 로봇 애니메이션 변경
+- [ ] RECORDING_START 수신 시 Wave 또는 특별 반응
+- [ ] EmotionBubble 표시 (STT 텍스트 기반)
 
-`types/chat.ts`
-```typescript
-export interface ChatMessage {
-  id: string;
-  role: 'user' | 'assistant';
-  content: string;
-  timestamp: number;
-}
-```
+## Phase 5: 폴리싱
 
-### 2-2. 아이템 데이터
-`lib/items.ts` - PRD Section 6 그대로 구현
+### Task 5-1: 시각 효과
+- [ ] 파티클 이펙트 (선택)
+- [ ] 씬 전환 애니메이션
+- [ ] 로딩 인디케이터 (Suspense fallback)
 
-### 2-3. 상태 관리
-`stores/gameStore.ts` - Zustand + AsyncStorage persist
-
-`hooks/useCoinTimer.ts` - 10초마다 코인 +1
-
-### 2-4. 상점 UI
-`components/Shop/ShopBottomSheet.tsx`
-`components/Shop/ItemCard.tsx` - 감정 기능 1줄 표시
-
-### 2-5. 공통 UI
-`components/UI/CoinCounter.tsx`
-`components/UI/ActionButton.tsx`
-
-### 2-6. 메인 화면
-`app/(tabs)/index.tsx` - TerrariumScene + 버튼 배치
-
-### Phase 2 완료 기준
-- [ ] 타입 정의 완료
-- [ ] 코인 카운터 (10초마다 +1)
-- [ ] 상점 열기/닫기
-- [ ] 아이템 카드에 감정 기능 표시
-- [ ] 구매 시 코인 차감
-
-### Phase 2 커밋
-```bash
-git checkout -b feature/fe2-shop
-
-# 타입 먼저 (다른 담당자 참조용)
-git add types/
-git commit -m "feat(fe2): add type definitions"
-git push origin feature/fe2-shop
-
-# 나머지
-git add stores/ hooks/ lib/items.ts components/Shop/ components/UI/ app/
-git commit -m "feat(fe2): implement shop and state management"
-```
-
----
-
-## Phase 3 (12:40~14:00) - 정령 상태 UI
-
-**main 머지 후 시작**: `git checkout main && git pull`
-
-### 3-1. 정령 상태 UI
-`components/Spirit/SpiritStatus.tsx`
-- 상태 3단계 표시 (고요/살짝 지침/반짝임)
-- 상태별 glow 효과
-- 상태 텍스트 배지
-
-`components/Spirit/SpiritGreeting.tsx`
-- 인사 말풍선 UI
-- AI-2가 만든 lib/spiritResponses.ts 사용
-
-`hooks/useSpiritState.ts`
-- 상태 계산 로직:
-  - 3일 미접속 → tired
-  - 3일 연속 OR 대화 5회 → sparkling
-  - 기본 → calm
-
-### 3-2. 세션 상태
-`stores/sessionStore.ts`
-- 세션 시작 시간, 대화 횟수, 구매 아이템, 체류 시간
-
-### Phase 3 커밋
-```bash
-git add components/Spirit/ hooks/useSpiritState.ts stores/sessionStore.ts
-git commit -m "feat(fe2): implement spirit status UI"
-```
-
----
-
-## Phase 4 (14:00~15:00) - 감정 루틴 ⭐ 메인
-
-**main 머지 후 시작**: `git checkout main && git pull`
-
-### 4-1. "오늘은 여기까지" 버튼
-`components/UI/EndSessionButton.tsx`
-- 탭 시 DiaryModal 열기
-- AI-2가 만든 CLOSING_MESSAGES 사용
-
-### 4-2. 1줄 일기 모달
-`components/Diary/DiaryModal.tsx`
-- 마무리 멘트 표시
-- 일기 후보 2개 버튼
-
-`components/Diary/DiarySuggestions.tsx`
-- 2개 후보 버튼 UI
-
-`hooks/useDiarySuggestions.ts`
-- 오늘 활동 기반 후보 생성:
-  - 대화 → "오늘은 마음을 나눴다"
-  - 구매 → "작은 변화가 기분을 바꿨다"
-  - 짧게 → "잠깐이라도 쉬었다"
-
-### 4-3. 정령 구매 반응 연결
-- 아이템 구매 시 SpiritGreeting에 반응 표시
-- AI-2가 만든 PURCHASE_REACTIONS 사용
-
-### Phase 4 완료 기준
-- [ ] "오늘은 여기까지" 버튼 동작
-- [ ] 마무리 멘트 표시
-- [ ] 1줄 일기 후보 2개
-- [ ] 일기 저장 (AsyncStorage)
-- [ ] 정령 구매 반응
-
-### Phase 4 커밋
-```bash
-git add components/Diary/ components/UI/EndSessionButton.tsx hooks/useDiarySuggestions.ts
-git commit -m "feat(fe2): implement emotional routine system"
-```
-
----
-
-## Phase 5 (15:00~15:30) - 통합 테스트
-
-- [ ] 전체 플로우 테스트
-- [ ] AsyncStorage 저장/로드 확인
-- [ ] 크리티컬 버그 수정
-
----
-
-## 최종 커밋
-```bash
-git checkout main && git pull
-git add -A
-git commit -m "feat(fe2): finalize state management and emotional routine"
-git push origin main
-```
+### Task 5-2: 성능 최적화
+- [ ] GLB 파일 크기 확인 (gltf-transform compress)
+- [ ] 불필요한 castShadow 제거
+- [ ] pixelRatio 제한
