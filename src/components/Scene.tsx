@@ -1,52 +1,63 @@
 import { useEffect } from 'react'
 import { useThree } from '@react-three/fiber'
 import { OrbitControls, Environment, useGLTF } from '@react-three/drei'
+import { Physics, RigidBody, CuboidCollider } from '@react-three/rapier'
 import { Color, Box3, Vector3 } from 'three'
-import { Robot } from './Robot'
-import type { RobotAnimation } from './Robot'
+import { RobotController } from './robot/RobotController'
+import type { AIMotionResponse } from '../types/ai.types'
 
 interface SceneProps {
-  animation?: RobotAnimation
+  aiResponse?: AIMotionResponse | null
+  onAnimationChange?: (animation: string) => void
+  onMotionComplete?: () => void
 }
 
-// 배경 모델 + 분석
 function ForestHouse() {
   const { scene } = useGLTF('/models/forest_house.glb')
 
   useEffect(() => {
-    // 바운딩 박스 분석
     const box = new Box3().setFromObject(scene)
     const size = new Vector3()
     const center = new Vector3()
     box.getSize(size)
     box.getCenter(center)
 
-    console.log('=== Forest House 분석 ===')
-    console.log('Min:', box.min)
-    console.log('Max:', box.max)
+    console.log('=== Forest House ===')
     console.log('Size:', size)
     console.log('Center:', center)
-    console.log('바닥 Y 위치:', box.min.y)
   }, [scene])
 
   return (
-    <primitive
-      object={scene}
-      position={[0, 0, 0]}
-      scale={1}
-    />
+    <RigidBody type="fixed" colliders="trimesh">
+      <primitive
+        object={scene}
+        position={[0, 0, 0]}
+        scale={1}
+      />
+    </RigidBody>
   )
 }
 
-export function Scene({ animation = 'Idle' }: SceneProps) {
+// 넓은 바닥 충돌체
+function Ground() {
+  return (
+    <RigidBody type="fixed" position={[0, -0.5, 0]}>
+      <CuboidCollider args={[50, 0.5, 50]} />
+    </RigidBody>
+  )
+}
+
+export function Scene({
+  aiResponse,
+  onAnimationChange,
+  onMotionComplete,
+}: SceneProps) {
   const { gl } = useThree()
 
-  // 하늘색 배경
   gl.setClearColor(new Color('#87CEEB'))
 
   return (
     <>
-      {/* 조명 */}
       <ambientLight intensity={0.8} />
       <directionalLight
         position={[10, 20, 10]}
@@ -59,21 +70,21 @@ export function Scene({ animation = 'Idle' }: SceneProps) {
         intensity={0.5}
       />
 
-      {/* 환경 조명 */}
       <Environment preset="sunset" />
 
-      {/* 배경 - Forest House */}
-      <ForestHouse />
+      <Physics gravity={[0, -9.81, 0]} debug={false}>
+        <Ground />
+        <ForestHouse />
 
-      {/* 로봇 캐릭터 - 배경 바닥 위에 배치 */}
-      {/* 바닥 Y=0.244, 로봇 min Y=-12.14, scale 0.3 → position Y = 0.244 + 12.14*0.3 = 3.88 */}
-      <Robot
-        animation={animation}
-        position={[-0.2, 0.36, 1.8]}
-        scale={0.2}
-      />
+        <RobotController
+          aiResponse={aiResponse}
+          initialPosition={[-0.2, 0.36, 1.8]}
+          scale={0.2}
+          onAnimationChange={onAnimationChange}
+          onMotionComplete={onMotionComplete}
+        />
+      </Physics>
 
-      {/* 카메라 컨트롤 */}
       <OrbitControls
         enablePan={true}
         enableZoom={true}
